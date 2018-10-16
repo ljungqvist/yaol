@@ -142,7 +142,7 @@ private class FlatMappedObservable<T>(private val getter: () -> Observable<T>) :
 
 }
 
-open class MutableObservable<T>(initialValue: T) : Observable<T>() {
+open class MutableObservable<T> internal constructor(initialValue: T) : Observable<T>() {
 
     override var value: T = initialValue
         set(value) {
@@ -156,3 +156,5 @@ open class MutableObservable<T>(initialValue: T) : Observable<T>() {
 fun <T> observable(value: T): Observable<T> = object : Observable<T>() {
     override val value: T = value
 }
+
+fun <T> mutableObservable(value: T): MutableObservable<T> = MutableObservable(value)
