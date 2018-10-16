@@ -24,7 +24,7 @@ abstract class Observable<out T> {
         }
     }
 
-    internal fun unsubscribe(subscription: Subscription<T>) {
+    internal open fun unsubscribe(subscription: Subscription<T>) {
         subscriptions.updateAndGet { a -> a - subscription }
     }
 
@@ -59,31 +59,51 @@ abstract class Observable<out T> {
             MappedObservable { mapping(value) }
                     .also(::addMappedObservables)
 
+    fun <OUT> flatMap(mapping: (T) -> Observable<OUT>): Observable<OUT> =
+            FlatMappedObservable { mapping(value) }
+                    .also(::addMappedObservables)
+
+    fun <OUT> flatMapNullable(mapping: (T) -> Observable<OUT>?): Observable<OUT?> =
+            FlatMappedObservable { mapping(value) ?: observable(null) }
+                    .also(::addMappedObservables)
+
     fun <A, OUT> join(other: Observable<A>, mapping: (T, A) -> OUT): Observable<OUT> =
             MappedObservable { mapping(value, other.value) }
-                    .also(::addMappedObservables)
+                    .also { mapped ->
+                        listOf(this, other).forEach { it.addMappedObservables(mapped) }
+                    }
 
     fun <A, B, OUT> join(otherA: Observable<A>, otherB: Observable<B>, mapping: (T, A, B) -> OUT): Observable<OUT> =
             MappedObservable { mapping(value, otherA.value, otherB.value) }
-                    .also(::addMappedObservables)
+                    .also { mapped ->
+                        listOf(this, otherA, otherB).forEach { it.addMappedObservables(mapped) }
+                    }
 
     fun <A, B, C, OUT> join(otherA: Observable<A>, otherB: Observable<B>, otherC: Observable<C>, mapping: (T, A, B, C) -> OUT): Observable<OUT> =
             MappedObservable { mapping(value, otherA.value, otherB.value, otherC.value) }
-                    .also(::addMappedObservables)
+                    .also { mapped ->
+                        listOf(this, otherA, otherB, otherC).forEach { it.addMappedObservables(mapped) }
+                    }
 
     fun <A, B, C, D, OUT> join(otherA: Observable<A>, otherB: Observable<B>, otherC: Observable<C>, otherD: Observable<D>, mapping: (T, A, B, C, D) -> OUT): Observable<OUT> =
             MappedObservable { mapping(value, otherA.value, otherB.value, otherC.value, otherD.value) }
-                    .also(::addMappedObservables)
+                    .also { mapped ->
+                        listOf(this, otherA, otherB, otherC, otherD).forEach { it.addMappedObservables(mapped) }
+                    }
 
     fun <A, B, C, D, E, OUT> join(otherA: Observable<A>, otherB: Observable<B>, otherC: Observable<C>, otherD: Observable<D>, otherE: Observable<E>, mapping: (T, A, B, C, D, E) -> OUT): Observable<OUT> =
             MappedObservable { mapping(value, otherA.value, otherB.value, otherC.value, otherD.value, otherE.value) }
-                    .also(::addMappedObservables)
+                    .also { mapped ->
+                        listOf(this, otherA, otherB, otherC, otherD, otherE).forEach { it.addMappedObservables(mapped) }
+                    }
 
 }
 
-private class MappedObservable<OUT>(private val getter: () -> OUT) : Observable<OUT>() {
+fun <T> Observable<Observable<T>>.flatten(): Observable<T> = flatMap { it }
 
-    override var value: OUT = getter()
+private class MappedObservable<T>(private val getter: () -> T) : Observable<T>() {
+
+    override var value: T = getter()
         private set
 
     override fun notifyChange() {
@@ -91,6 +111,33 @@ private class MappedObservable<OUT>(private val getter: () -> OUT) : Observable<
         val update = value != newValue
         value = newValue
         if (update) super.notifyChange()
+    }
+
+}
+
+private class FlatMappedObservable<T>(private val getter: () -> Observable<T>) : Observable<T>() {
+
+    private var delegate = getter()
+    private var subscription = delegate.onChange { super.notifyChange() }
+
+    override val value: T
+        get() = delegate.value
+
+    override fun notifyChange() {
+        val newDelegate = getter()
+        if (delegate !== newDelegate) {
+            val newValue = newDelegate.value
+            val update = value != newValue
+            subscription.unsubscribe()
+            delegate = newDelegate
+            subscription = delegate.onChange { super.notifyChange() }
+            if (update) super.notifyChange()
+        }
+    }
+
+    override fun unsubscribe(subscription: Subscription<T>) {
+        this.subscription.unsubscribe()
+        super.unsubscribe(subscription)
     }
 
 }
@@ -108,12 +155,4 @@ open class MutableObservable<T>(initialValue: T) : Observable<T>() {
 
 fun <T> observable(value: T): Observable<T> = object : Observable<T>() {
     override val value: T = value
-}
-
-class Subscription<in T>(private val observable: Observable<T>, internal val onChange: (T) -> Unit) {
-
-    fun unsubscribe() {
-        observable.unsubscribe(this)
-    }
-
 }
