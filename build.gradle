@@ -26,7 +26,7 @@ repositories {
 }
 
 group = 'info.ljungqvist'
-version = '0.1-SNAPSHOT'
+version = '0.1'
 
 uploadArchives {
     repositories {
