@@ -243,7 +243,7 @@ class ObservableTest : Spek({
                     }
                 }
 
-                var s4 = mappedObservable.onChange { refMapped.set(mappedObservable.value) }
+                val s4 = mappedObservable.onChange { refMapped.set(mappedObservable.value) }
 
                 Assert.assertEquals("that is not true", mappedObservable.value)
                 Assert.assertNull(refMapped.get())
@@ -341,6 +341,39 @@ class ObservableTest : Spek({
                 s2.unsubscribe()
                 s3.unsubscribe()
                 s4.unsubscribe()
+
+            }
+
+        }
+
+        context("Obervable delegates") {
+
+            class TestClass(init: String) {
+                val mutableObservable = MutableObservable(init)
+                var mutable by mutableObservableProperty { mutableObservable }
+                val immutableObservable = mutableObservable.map { "$it $it" }
+                val immutable by observableProperty { immutableObservable }
+            }
+            
+            it("delegates properties should have the same value as the observable") {
+
+                val test = TestClass("one")
+                Assert.assertEquals("one", test.mutableObservable.value)
+                Assert.assertEquals("one", test.mutable)
+                Assert.assertEquals("one one", test.immutableObservable.value)
+                Assert.assertEquals("one one", test.immutable)
+
+                test.mutableObservable.value = "two"
+                Assert.assertEquals("two", test.mutableObservable.value)
+                Assert.assertEquals("two", test.mutable)
+                Assert.assertEquals("two two", test.immutableObservable.value)
+                Assert.assertEquals("two two", test.immutable)
+
+                test.mutable = "three"
+                Assert.assertEquals("three", test.mutableObservable.value)
+                Assert.assertEquals("three", test.mutable)
+                Assert.assertEquals("three three", test.immutableObservable.value)
+                Assert.assertEquals("three three", test.immutable)
 
             }
 

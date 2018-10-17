@@ -2,6 +2,9 @@ package info.ljungqvist.yaol
 
 import java.lang.ref.WeakReference
 import java.util.concurrent.atomic.AtomicReference
+import kotlin.properties.ReadOnlyProperty
+import kotlin.properties.ReadWriteProperty
+import kotlin.reflect.KProperty
 
 abstract class Observable<out T> {
 
@@ -194,3 +197,15 @@ fun <T> observable(value: T): Observable<T> = object : Observable<T>() {
 }
 
 fun <T> mutableObservable(value: T): MutableObservable<T> = MutableObservable(value)
+
+
+fun <T> observableProperty(observable: () -> Observable<T>): ReadOnlyProperty<Any, T> = object : ReadOnlyProperty<Any, T> {
+    override operator fun getValue(thisRef: Any, property: KProperty<*>): T = observable().value
+}
+
+fun <T> mutableObservableProperty(mutableObservable: () -> MutableObservable<T>): ReadWriteProperty<Any, T> = object : ReadWriteProperty<Any, T> {
+    override operator fun getValue(thisRef: Any, property: KProperty<*>): T = mutableObservable().value
+    override operator fun setValue(thisRef: Any, property: KProperty<*>, value: T) {
+        mutableObservable().value = value
+    }
+}
