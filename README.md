@@ -1,9 +1,10 @@
 # yaol
 Yet Another Observable Library
 
-## Gradle
+### Gradle
 
-Include http://ljungqvist.info/maven/ amongst your repositories:
+Include <http://ljungqvist.info/maven/> amongst your repositories:
+
 ```
 repositories {
     maven { url "http://ljungqvist.info/maven/" }
@@ -12,7 +13,9 @@ repositories {
 And the library amongst your dependencies:
 ```
 dependencies {
-    implementation 'info.ljungqvist:yaol:0.1'
-    implementation 'info.ljungqvist:yaol-android:0.1'
+    implementation 'info.ljungqvist:yaol:0.2'
+    // or
+    implementation 'info.ljungqvist:yaol-android:0.2'
 }
 ```
+

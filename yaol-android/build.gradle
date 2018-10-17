@@ -3,7 +3,7 @@ apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-kapt'
 apply plugin: 'maven'
 
-group = 'info.ljungqvist'
+group = yaol_group
 version = yaol_version
 
 uploadArchives {
