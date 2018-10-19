@@ -13,9 +13,9 @@ repositories {
 And the library amongst your dependencies:
 ```
 dependencies {
-    implementation 'info.ljungqvist:yaol:0.2'
+    implementation 'info.ljungqvist:yaol:0.3'
     // or
-    implementation 'info.ljungqvist:yaol-android:0.2'
+    implementation 'info.ljungqvist:yaol-android:0.3'
 }
 ```
 

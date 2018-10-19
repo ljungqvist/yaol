@@ -379,5 +379,29 @@ class ObservableTest : Spek({
 
         }
 
+        context("List of observables") {
+
+            it("should be joined to an observable list") {
+
+                val observableList: List<MutableObservable<String>> = listOf(
+                    mutableObservable("I"),
+                    mutableObservable("am"),
+                    mutableObservable("here.")
+                )
+                val listObservable = observableList.join { it.joinToString(" ") }
+
+                Assert.assertEquals("I am here.", listObservable.value)
+
+                observableList[2].value = "there."
+                Assert.assertEquals("I am there.", listObservable.value)
+
+                observableList[0].value = "You"
+                observableList[1].value = "are"
+                Assert.assertEquals("You are there.", listObservable.value)
+
+            }
+
+        }
+
     }
 })
