@@ -3,17 +3,6 @@ apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-kapt'
 apply plugin: 'maven'
 
-group = yaol_group
-version = yaol_version
-
-uploadArchives {
-    repositories {
-        mavenDeployer {
-            repository(url: mavenLocal().getUrl())
-        }
-    }
-}
-
 android {
     compileSdkVersion 28
     defaultConfig {
@@ -40,4 +29,24 @@ dependencies {
     implementation 'com.android.support:appcompat-v7:28.0.0'
     api 'com.android.databinding:library:3.2.1'
     api "info.ljungqvist:yaol:$yaol_version"
+}
+
+//task sourcesJar(type: Jar, dependsOn: classes) {
+//    classifier = 'sources'
+//    from sourceSets.main.allSource
+//}
+//
+//artifacts {
+//    archives sourcesJar
+//}
+
+group = yaol_group
+version = yaol_version
+
+uploadArchives {
+    repositories {
+        mavenDeployer {
+            repository(url: mavenLocal().getUrl())
+        }
+    }
 }

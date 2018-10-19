@@ -44,7 +44,7 @@ class ObservableTest : Spek({
                 observable.value = "six"
                 Assert.assertEquals("five", ref.get())
 
-                observable.runAndOnChangeUnitTrue {
+                observable.runAndOnChangeUntilTrue {
                     ref.set(it)
                     it.length >= 6
                 }
@@ -68,7 +68,7 @@ class ObservableTest : Spek({
                 observable.value = "twelve"
                 Assert.assertEquals("eleven", ref.get())
 
-                observable.runAndOnChangeUnitTrue {
+                observable.runAndOnChangeUntilTrue {
                     ref.set(it)
                     it.length >= 6
                 }
@@ -349,7 +349,7 @@ class ObservableTest : Spek({
         context("Obervable delegates") {
 
             class TestClass(init: String) {
-                val mutableObservable = MutableObservable(init)
+                val mutableObservable = mutableObservable(init)
                 var mutable by mutableObservableProperty { mutableObservable }
                 val immutableObservable = mutableObservable.map { "$it $it" }
                 val immutable by observableProperty { immutableObservable }

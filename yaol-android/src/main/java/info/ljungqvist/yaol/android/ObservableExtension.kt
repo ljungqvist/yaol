@@ -10,17 +10,17 @@ import info.ljungqvist.yaol.selfReference
 private val handler by lazy { Handler(Looper.getMainLooper()) }
 private fun <T> onMain(body: (T) -> Unit): (T) -> Unit = { value -> handler.post { body(value) } }
 
-fun <T> Observable<T>.onChangeOnMain(body: (T) -> Unit): Subscription<*> =
+fun <T> Observable<T>.onChangeOnMain(body: (T) -> Unit): Subscription =
     onChange(onMain(body))
 
-fun <T> Observable<T>.runAndOnChangeOnMain(body: (T) -> Unit): Subscription<*> {
+fun <T> Observable<T>.runAndOnChangeOnMain(body: (T) -> Unit): Subscription {
     body(value)
     return onChangeOnMain(body)
 }
 
-fun <T> Observable<T>.runAndOnChangeUnitTrueOnMain(body: (T) -> Boolean) {
+fun <T> Observable<T>.runAndOnChangeUntilTrueOnMain(body: (T) -> Boolean) {
     if (!body(value)) {
-        selfReference<Subscription<*>> {
+        selfReference<Subscription> {
             onChangeOnMain {
                 if (body(it)) {
                     self.unsubscribe()

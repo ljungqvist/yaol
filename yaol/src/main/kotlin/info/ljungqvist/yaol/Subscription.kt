@@ -1,9 +1,12 @@
 package info.ljungqvist.yaol
 
+interface Subscription {
+    fun unsubscribe()
+}
 
-class Subscription<in T>(private val observable: Observable<T>, internal val onChange: (T) -> Unit) {
+internal class SubscriptionImpl<in T>(private val observable: Observable<T>, internal val onChange: (T) -> Unit) : Subscription {
 
-    fun unsubscribe() {
+    override fun unsubscribe() {
         observable.unsubscribe(this)
     }
 

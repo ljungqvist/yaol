@@ -10,8 +10,8 @@ abstract class Observable<out T> {
 
     abstract val value: T
 
-    private val subscriptions: AtomicReference<Set<Subscription<T>>> = AtomicReference(emptySet())
-    private val weakSubscriptions: AtomicReference<Set<WeakReference<Subscription<T>>>> = AtomicReference(emptySet())
+    private val subscriptions: AtomicReference<Set<SubscriptionImpl<T>>> = AtomicReference(emptySet())
+    private val weakSubscriptions: AtomicReference<Set<WeakReference<SubscriptionImpl<T>>>> = AtomicReference(emptySet())
     private val mappedObservables: AtomicReference<Set<WeakReference<out Observable<*>>>> = AtomicReference(emptySet())
 
     protected open fun notifyChange() {
@@ -36,7 +36,7 @@ abstract class Observable<out T> {
             }
     }
 
-    internal open fun unsubscribe(subscription: Subscription<T>) {
+    internal open fun unsubscribe(subscription: SubscriptionImpl<T>) {
         subscriptions.updateAndGet { a -> a - subscription }
         weakSubscriptions
             .updateAndGet { set ->
@@ -46,27 +46,27 @@ abstract class Observable<out T> {
             }
     }
 
-    fun onChange(body: (T) -> Unit): Subscription<*> =
-        Subscription(this, body)
+    fun onChange(body: (T) -> Unit): Subscription =
+        SubscriptionImpl(this, body)
             .also { subs -> subscriptions.updateAndGet { it + subs } }
 
-    fun onChangeWeak(body: (T) -> Unit): Subscription<*> =
-        Subscription(this, body)
+    fun onChangeWeak(body: (T) -> Unit): Subscription =
+        SubscriptionImpl(this, body)
             .also { subs -> weakSubscriptions.updateAndGet { it + WeakReference(subs) } }
 
-    fun runAndOnChange(body: (T) -> Unit): Subscription<*> {
+    fun runAndOnChange(body: (T) -> Unit): Subscription {
         body(value)
         return onChange(body)
     }
 
-    fun runAndOnChangeWeak(body: (T) -> Unit): Subscription<*> {
+    fun runAndOnChangeWeak(body: (T) -> Unit): Subscription {
         body(value)
         return onChangeWeak(body)
     }
 
-    fun runAndOnChangeUnitTrue(body: (T) -> Boolean) {
+    fun runAndOnChangeUntilTrue(body: (T) -> Boolean) {
         if (!body(value)) {
-            selfReference<Subscription<*>> {
+            selfReference<Subscription> {
                 onChange {
                     if (body(it)) {
                         self.unsubscribe()
@@ -76,9 +76,9 @@ abstract class Observable<out T> {
         }
     }
 
-    fun runAndOnChangeUnitTrueWeak(body: (T) -> Boolean) {
+    fun runAndOnChangeUntilTrueWeak(body: (T) -> Boolean) {
         if (!body(value)) {
-            selfReference<Subscription<*>> {
+            selfReference<Subscription> {
                 onChangeWeak {
                     if (body(it)) {
                         self.unsubscribe()
@@ -166,21 +166,25 @@ fun <T, OUT> List<Observable<T>>.join(mapping: (List<T>) -> OUT): Observable<OUT
 
 private class MappedObservable<T>(private val getter: () -> T) : Observable<T>() {
 
-    private var initialized: Boolean = false
-    private var internalValue: T? = null
+    private var ref: SettableReference<T> = SettableReference.Unset
 
     override val value: T
-        get() = internalValue
-            ?: synchronized(this) {
-                initialized = true
-                getter().also { internalValue = it }
+        get() = ref.let { ref ->
+            when (ref) {
+                is SettableReference.Set -> ref.value
+                is SettableReference.Unset -> getter()
             }
+        }
 
     override fun notifyChange() = synchronized(this) {
         val newValue = getter()
-        val update = !initialized || value != newValue
-        initialized = true
-        internalValue = newValue
+        val update = ref.let {ref ->
+            when (ref) {
+                is SettableReference.Set -> ref.value != newValue
+                is SettableReference.Unset -> true
+            }
+        }
+        ref = SettableReference.Set(newValue)
         if (update) super.notifyChange()
     }
 
@@ -206,14 +210,14 @@ private class FlatMappedObservable<T>(private val getter: () -> Observable<T>) :
         }
     }
 
-    override fun unsubscribe(subscription: Subscription<T>) {
+    override fun unsubscribe(subscription: SubscriptionImpl<T>) {
         this.subscription.unsubscribe()
         super.unsubscribe(subscription)
     }
 
 }
 
-open class MutableObservable<T> internal constructor(initialValue: T) : Observable<T>() {
+open class MutableObservable<T> protected constructor(initialValue: T) : Observable<T>() {
 
     override var value: T = initialValue
         set(value) {
@@ -228,7 +232,7 @@ fun <T> observable(value: T): Observable<T> = object : Observable<T>() {
     override val value: T = value
 }
 
-fun <T> mutableObservable(value: T): MutableObservable<T> = MutableObservable(value)
+fun <T> mutableObservable(value: T): MutableObservable<T> = object : MutableObservable<T>(value) {}
 
 
 fun <T> observableProperty(observable: () -> Observable<T>): ReadOnlyProperty<Any, T> =
