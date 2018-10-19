@@ -124,6 +124,64 @@ class ObservableTest : Spek({
 
             }
 
+
+            it("should be mappable multiple times") {
+
+                observable.value = ""
+                val mapped1 = observable.map { "$it one" }
+                val mapped2 = mapped1.map { "$it two" }
+                val mapped3 = mapped2.map { "$it three" }
+
+                Assert.assertEquals("", observable.value)
+                Assert.assertEquals(" one", mapped1.value)
+                Assert.assertEquals(" one two", mapped2.value)
+                Assert.assertEquals(" one two three", mapped3.value)
+
+                observable.value = "zero"
+
+                Assert.assertEquals("zero", observable.value)
+                Assert.assertEquals("zero one", mapped1.value)
+                Assert.assertEquals("zero one two", mapped2.value)
+                Assert.assertEquals("zero one two three", mapped3.value)
+
+            }
+
+            it("nullable should be mappable multiple times") {
+
+                val mapped0: MutableObservable<String?> = mutableObservable(null)
+                val mapped1 = mapped0.map { value -> value?.let { "$it one" } }
+                val mapped2 = mapped1.map { value -> value?.let { "$it two" } }
+                val mapped3 = mapped2.map { value -> value?.let { "$it three" } }
+                var res1: String? = "---nothing---"
+                var res2: String? = "---nothing---"
+                var res3: String? = "---nothing---"
+                val s1 = mapped1.onChange { res1 = it }
+                val s2 = mapped2.onChange { res2 = it }
+                val s3 = mapped3.onChange { res3 = it }
+
+                Assert.assertNull(mapped0.value)
+                Assert.assertNull(mapped1.value)
+                Assert.assertNull(mapped2.value)
+                Assert.assertNull(mapped3.value)
+                Assert.assertEquals("---nothing---", res1)
+                Assert.assertEquals("---nothing---", res2)
+                Assert.assertEquals("---nothing---", res3)
+
+                mapped0.value = "zero"
+                Assert.assertEquals("zero", mapped0.value)
+                Assert.assertEquals("zero one", mapped1.value)
+                Assert.assertEquals("zero one two", mapped2.value)
+                Assert.assertEquals("zero one two three", mapped3.value)
+                Assert.assertEquals("zero one", res1)
+                Assert.assertEquals("zero one two", res2)
+                Assert.assertEquals("zero one two three", res3)
+
+                s1.unsubscribe()
+                s2.unsubscribe()
+                s3.unsubscribe()
+
+            }
+
         }
 
         context("two Observables") {
@@ -354,7 +412,7 @@ class ObservableTest : Spek({
                 val immutableObservable = mutableObservable.map { "$it $it" }
                 val immutable by observableProperty { immutableObservable }
             }
-            
+
             it("delegates properties should have the same value as the observable") {
 
                 val test = TestClass("one")
