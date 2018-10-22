@@ -11,7 +11,8 @@ abstract class Observable<out T> {
     abstract val value: T
 
     private val subscriptions: AtomicReference<Set<SubscriptionImpl<T>>> = AtomicReference(emptySet())
-    private val weakSubscriptions: AtomicReference<Set<WeakReference<SubscriptionImpl<T>>>> = AtomicReference(emptySet())
+    private val weakSubscriptions: AtomicReference<Set<WeakReference<SubscriptionImpl<T>>>> =
+        AtomicReference(emptySet())
     private val mappedObservables: AtomicReference<Set<WeakReference<out Observable<*>>>> = AtomicReference(emptySet())
 
     protected open fun notifyChange() {
@@ -101,10 +102,12 @@ abstract class Observable<out T> {
     fun <OUT> flatMap(mapping: (T) -> Observable<OUT>): Observable<OUT> =
         FlatMappedObservable { mapping(value) }
             .also(::addMappedObservables)
+            .also { it.init() }
 
     fun <OUT> flatMapNullable(mapping: (T) -> Observable<OUT>?): Observable<OUT?> =
         FlatMappedObservable { mapping(value) ?: observable(null) }
             .also(::addMappedObservables)
+            .also { it.init() }
 
     fun <A, OUT> join(other: Observable<A>, mapping: (T, A) -> OUT): Observable<OUT> =
         MappedObservable { mapping(value, other.value) }
@@ -159,7 +162,7 @@ abstract class Observable<out T> {
 fun <T> Observable<Observable<T>>.flatten(): Observable<T> = flatMap { it }
 
 fun <T, OUT> List<Observable<T>>.join(mapping: (List<T>) -> OUT): Observable<OUT> =
-    MappedObservable { mapping( map { it.value }) }
+    MappedObservable { mapping(map { it.value }) }
         .also { mapped ->
             forEach { it.addMappedObservables(mapped) }
         }
@@ -169,21 +172,11 @@ private class MappedObservable<T>(private val getter: () -> T) : Observable<T>()
     private var ref: SettableReference<T> = SettableReference.Unset
 
     override val value: T
-        get() = ref.let { ref ->
-            when (ref) {
-                is SettableReference.Set -> ref.value
-                is SettableReference.Unset -> getter()
-            }
-        }
+        get() = ref.let({ it }, { getter() })
 
     override fun notifyChange() = synchronized(this) {
         val newValue = getter()
-        val update = ref.let {ref ->
-            when (ref) {
-                is SettableReference.Set -> ref.value != newValue
-                is SettableReference.Unset -> true
-            }
-        }
+        val update = ref.let({ it != newValue }, { true })
         ref = SettableReference.Set(newValue)
         if (update) super.notifyChange()
     }
@@ -192,27 +185,39 @@ private class MappedObservable<T>(private val getter: () -> T) : Observable<T>()
 
 private class FlatMappedObservable<T>(private val getter: () -> Observable<T>) : Observable<T>() {
 
-    private var delegate = getter()
-    private var subscription = delegate.onChange { super.notifyChange() }
+    private val notifySuper: (T) -> Unit = { super.notifyChange() }
+
+    private var ref: SettableReference<Observable<T>> = SettableReference.Unset
+    private val delegate
+        get() = ref.let({ it }, { getter() })
+    private var subscription: Subscription? = null
 
     override val value: T
         get() = delegate.value
 
-    override fun notifyChange() {
+    override fun notifyChange() = synchronized(this) {
         val newDelegate = getter()
-        if (delegate !== newDelegate) {
-            val newValue = newDelegate.value
-            val update = value != newValue
-            subscription.unsubscribe()
-            delegate = newDelegate
-            subscription = delegate.onChange { super.notifyChange() }
+
+        if (ref.let({it !== newDelegate}, {true})) {
+            val update = ref.let({it.value != newDelegate.value}, {true})
+            subscription?.unsubscribe()
+            ref = SettableReference.Set(newDelegate)
+            subscription = newDelegate.onChange(notifySuper)
             if (update) super.notifyChange()
         }
     }
 
     override fun unsubscribe(subscription: SubscriptionImpl<T>) {
-        this.subscription.unsubscribe()
+        this.subscription?.unsubscribe()
         super.unsubscribe(subscription)
+    }
+
+    fun init() = synchronized(this) {
+        ref.let({}, {
+            val newDelegate = getter()
+            ref = SettableReference.Set(newDelegate)
+            subscription = newDelegate.onChange(notifySuper)
+        })
     }
 
 }
