@@ -6,6 +6,10 @@ import kotlin.properties.ReadOnlyProperty
 import kotlin.properties.ReadWriteProperty
 import kotlin.reflect.KProperty
 
+private inline fun <T> MutableSet<T>.removeIfSynchronized(predicate: (T) -> Boolean): Unit = synchronized(this) {
+    forEach { if (predicate(it)) remove(it) }
+}
+
 private inline fun <T : Any> MutableSet<WeakReference<T>>.forEachSet(f: T.() -> Unit): Unit = synchronized(this) {
     var setSize = 0
     asSequence()
@@ -20,7 +24,7 @@ private inline fun <T : Any> MutableSet<WeakReference<T>>.forEachSet(f: T.() -> 
             else -> size / setSize > 2
         }
     ) {
-        removeIf { it.get() == null }
+        removeIfSynchronized { it.get() == null }
     }
 }
 
@@ -45,8 +49,8 @@ abstract class Observable<out T> {
 
     internal open fun unsubscribe(subscription: SubscriptionImpl<T>) {
         subscriptions.remove(subscription)
-        weakSubscriptions.removeIf { it.get() == null && it.get() === subscription }
-        mappedObservables.removeIf { it.get() == null }
+        weakSubscriptions.removeIfSynchronized { it.get() == null && it.get() === subscription }
+        mappedObservables.removeIfSynchronized { it.get() == null }
     }
 
     fun onChange(body: (T) -> Unit): Subscription =
