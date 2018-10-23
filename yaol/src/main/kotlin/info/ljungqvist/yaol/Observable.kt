@@ -1,59 +1,140 @@
 package info.ljungqvist.yaol
 
 import java.lang.ref.WeakReference
-import java.util.concurrent.atomic.AtomicReference
+import java.util.*
 import kotlin.properties.ReadOnlyProperty
 import kotlin.properties.ReadWriteProperty
 import kotlin.reflect.KProperty
 
+class Timer {
+
+    private var sum: Long = 0
+    private var start: Long? = null
+
+    private fun now() = System.nanoTime()
+
+    fun start() {
+        if (start != null) throw RuntimeException("Already running")
+        start = now()
+    }
+
+    fun stop() {
+        start
+            ?.let {
+                sum += now() - it
+                start = null
+            }
+            ?: throw RuntimeException("Not running")
+    }
+
+    fun <T> time(body: () -> T): T {
+        start()
+        val res = body()
+        stop()
+        return res
+    }
+
+    val millis: Long
+        get() =
+            if (null == start) sum / 1000000
+            else throw RuntimeException("Running")
+}
+
+private inline fun <T : Any> MutableSet<WeakReference<T>>.forEachSet(f: T.() -> Unit): Unit = synchronized(this) {
+    var setSize = 0
+    asSequence()
+        .mapNotNull { it.get() }
+        .forEach {
+            setSize++
+            it.f()
+        }
+    if (
+        when {
+            setSize < 10 -> size > 20
+            else -> size / setSize > 2
+        }
+    ) {
+        removeIf { it.get() == null }
+    }
+}
+
 abstract class Observable<out T> {
+
+    val timeNotifyChange = Timer()
+    val timeNotifyChangeSubscriptions = Timer()
+    val timeNotifyChangeWeakSubscriptions = Timer()
+    val timeNotifyChangeMappedObservables = Timer()
+    val timeUnsubscribe = Timer()
+    val timeAddMappedObservables = Timer()
 
     abstract val value: T
 
-    private val subscriptions: AtomicReference<Set<SubscriptionImpl<T>>> = AtomicReference(emptySet())
-    private val weakSubscriptions: AtomicReference<Set<WeakReference<SubscriptionImpl<T>>>> =
-        AtomicReference(emptySet())
-    private val mappedObservables: AtomicReference<Set<WeakReference<out Observable<*>>>> = AtomicReference(emptySet())
+//    private val subscriptions: AtomicReference<Set<SubscriptionImpl<T>>> = AtomicReference(emptySet())
+//    private val weakSubscriptions: AtomicReference<Set<WeakReference<SubscriptionImpl<T>>>> =
+//        AtomicReference(emptySet())
+//    private val mappedObservables: AtomicReference<Set<WeakReference<out Observable<*>>>> = AtomicReference(emptySet())
 
-    protected open fun notifyChange() {
-        mappedObservables
-            .updateAndGet { set ->
-                set.asSequence().filter { it.get() != null }.toSet()
+    private val subscriptions: MutableSet<SubscriptionImpl<T>> = Collections.synchronizedSet(HashSet())
+    private val weakSubscriptions: MutableSet<WeakReference<SubscriptionImpl<T>>> =
+        Collections.synchronizedSet(HashSet())
+    private val mappedObservables: MutableSet<WeakReference<Observable<*>>> = Collections.synchronizedSet(HashSet())
+
+//    protected open fun notifyChange() {
+//        mappedObservables
+//            .updateAndGet { set ->
+//                set.asSequence().filter { it.get() != null }.toSet()
+//            }
+//            .mapNotNull { it.get() }
+//            .forEach {
+//                it.notifyChange()
+//            }
+//        subscriptions.get().forEach {
+//            it.onChange(value)
+//        }
+//        weakSubscriptions
+//            .updateAndGet { set ->
+//                set.asSequence().filter { it.get() != null }.toSet()
+//            }
+//            .mapNotNull { it.get() }
+//            .forEach {
+//                it.onChange(value)
+//            }
+//    }
+
+    protected open fun notifyChange(): Unit = timeNotifyChange.time {
+        synchronized(mappedObservables) {
+            if (mappedObservables.size > 1) println("mappedObservables.size = ${mappedObservables.size}")
+            timeNotifyChangeMappedObservables.time {
+                mappedObservables.forEachSet { notifyChange() }
             }
-            .mapNotNull { it.get() }
-            .forEach {
-                it.notifyChange()
-            }
-        subscriptions.get().forEach {
-            it.onChange(value)
         }
-        weakSubscriptions
-            .updateAndGet { set ->
-                set.asSequence().filter { it.get() != null }.toSet()
+        synchronized(subscriptions) {
+            timeNotifyChangeSubscriptions.time {
+                subscriptions.forEach {
+                    it.onChange(value)
+                }
             }
-            .mapNotNull { it.get() }
-            .forEach {
-                it.onChange(value)
+        }
+        synchronized(weakSubscriptions) {
+            timeNotifyChangeWeakSubscriptions.time {
+                weakSubscriptions.forEachSet { onChange(value) }
             }
+        }
     }
 
-    internal open fun unsubscribe(subscription: SubscriptionImpl<T>) {
-        subscriptions.updateAndGet { a -> a - subscription }
-        weakSubscriptions
-            .updateAndGet { set ->
-                set.asSequence()
-                    .filter { it.get() != null && it.get() !== subscription }
-                    .toSet()
-            }
+    internal open fun unsubscribe(subscription: SubscriptionImpl<T>): Unit = timeUnsubscribe.time {
+        subscriptions.remove(subscription)
+        weakSubscriptions.removeIf { it.get() == null && it.get() === subscription }
+        mappedObservables.removeIf { it.get() == null }
     }
 
     fun onChange(body: (T) -> Unit): Subscription =
         SubscriptionImpl(this, body)
-            .also { subs -> subscriptions.updateAndGet { it + subs } }
+            .also { subs -> subscriptions.add(subs) }
 
     fun onChangeWeak(body: (T) -> Unit): Subscription =
         SubscriptionImpl(this, body)
-            .also { subs -> weakSubscriptions.updateAndGet { it + WeakReference(subs) } }
+            .also { subs -> weakSubscriptions.add(WeakReference(subs)) }
 
     fun runAndOnChange(body: (T) -> Unit): Subscription {
         body(value)
@@ -90,9 +171,7 @@ abstract class Observable<out T> {
     }
 
     internal fun addMappedObservables(observable: Observable<*>) {
-        mappedObservables.updateAndGet { set ->
-            set.asSequence().filter { it.get() != null }.toSet() + WeakReference(observable)
-        }
+        mappedObservables.add(WeakReference(observable))
     }
 
     fun <OUT> map(mapping: (T) -> OUT): Observable<OUT> =
@@ -198,8 +277,8 @@ private class FlatMappedObservable<T>(private val getter: () -> Observable<T>) :
     override fun notifyChange() = synchronized(this) {
         val newDelegate = getter()
 
-        if (ref.let({it !== newDelegate}, {true})) {
-            val update = ref.let({it.value != newDelegate.value}, {true})
+        if (ref.let({ it !== newDelegate }, { true })) {
+            val update = ref.let({ it.value != newDelegate.value }, { true })
             subscription?.unsubscribe()
             ref = SettableReference.Set(newDelegate)
             subscription = newDelegate.onChange(notifySuper)
