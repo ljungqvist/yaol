@@ -1,5 +1,7 @@
 apply plugin: 'kotlin'
 apply plugin: 'maven'
+apply plugin: 'maven-publish'
+apply plugin: 'com.jfrog.bintray'
 
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
@@ -26,6 +28,36 @@ compileKotlin {
 }
 compileTestKotlin {
     kotlinOptions.jvmTarget = "1.6"
+}
+
+publishing {
+    publications {
+        Production(MavenPublication) {
+            from components.java
+            artifact sourcesJar
+            groupId yaol_group
+            artifactId 'yaol'
+            version yaol_version
+        }
+    }
+}
+
+bintray {
+    user = System.getenv('BINTRAY_USER')
+    key = System.getenv('BINTRAY_KEY')
+    publications = ['Production']
+    pkg {
+        repo = 'yaol'
+        name = 'yaol'
+        userOrg = user
+        licenses = ['Apache-2.0']
+        vcsUrl = 'git@github.com:ljungqvist/yaol.git'
+        version {
+            name = yaol_version
+            released  = new Date()
+            vcsTag = "v$yaol_version"
+        }
+    }
 }
 
 group yaol_group

@@ -16,6 +16,7 @@ bin/
 gen/
 .gradle/
 */build/
+/build/
 local.properties
 proguard/
 .navigation/

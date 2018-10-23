@@ -7,7 +7,7 @@ Include <http://ljungqvist.info/maven/> amongst your repositories:
 
 ```
 repositories {
-    maven { url "http://ljungqvist.info/maven/" }
+    maven { url "http://ljungqvist.info/maven" }
 }
 ```
 And the library amongst your dependencies:
