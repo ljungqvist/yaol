@@ -6,40 +6,6 @@ import kotlin.properties.ReadOnlyProperty
 import kotlin.properties.ReadWriteProperty
 import kotlin.reflect.KProperty
 
-class Timer {
-
-    private var sum: Long = 0
-    private var start: Long? = null
-
-    private fun now() = System.nanoTime()
-
-    fun start() {
-        if (start != null) throw RuntimeException("Already running")
-        start = now()
-    }
-
-    fun stop() {
-        start
-            ?.let {
-                sum += now() - it
-                start = null
-            }
-            ?: throw RuntimeException("Not running")
-    }
-
-    fun <T> time(body: () -> T): T {
-        start()
-        val res = body()
-        stop()
-        return res
-    }
-
-    val millis: Long
-        get() =
-            if (null == start) sum / 1000000
-            else throw RuntimeException("Running")
-}
-
 private inline fun <T : Any> MutableSet<WeakReference<T>>.forEachSet(f: T.() -> Unit): Unit = synchronized(this) {
     var setSize = 0
     asSequence()
@@ -60,69 +26,24 @@ private inline fun <T : Any> MutableSet<WeakReference<T>>.forEachSet(f: T.() -> 
 
 abstract class Observable<out T> {
 
-    val timeNotifyChange = Timer()
-    val timeNotifyChangeSubscriptions = Timer()
-    val timeNotifyChangeWeakSubscriptions = Timer()
-    val timeNotifyChangeMappedObservables = Timer()
-    val timeUnsubscribe = Timer()
-    val timeAddMappedObservables = Timer()
-
     abstract val value: T
-
-//    private val subscriptions: AtomicReference<Set<SubscriptionImpl<T>>> = AtomicReference(emptySet())
-//    private val weakSubscriptions: AtomicReference<Set<WeakReference<SubscriptionImpl<T>>>> =
-//        AtomicReference(emptySet())
-//    private val mappedObservables: AtomicReference<Set<WeakReference<out Observable<*>>>> = AtomicReference(emptySet())
 
     private val subscriptions: MutableSet<SubscriptionImpl<T>> = Collections.synchronizedSet(HashSet())
     private val weakSubscriptions: MutableSet<WeakReference<SubscriptionImpl<T>>> =
         Collections.synchronizedSet(HashSet())
     private val mappedObservables: MutableSet<WeakReference<Observable<*>>> = Collections.synchronizedSet(HashSet())
 
-//    protected open fun notifyChange() {
-//        mappedObservables
-//            .updateAndGet { set ->
-//                set.asSequence().filter { it.get() != null }.toSet()
-//            }
-//            .mapNotNull { it.get() }
-//            .forEach {
-//                it.notifyChange()
-//            }
-//        subscriptions.get().forEach {
-//            it.onChange(value)
-//        }
-//        weakSubscriptions
-//            .updateAndGet { set ->
-//                set.asSequence().filter { it.get() != null }.toSet()
-//            }
-//            .mapNotNull { it.get() }
-//            .forEach {
-//                it.onChange(value)
-//            }
-//    }
-
-    protected open fun notifyChange(): Unit = timeNotifyChange.time {
-        synchronized(mappedObservables) {
-            if (mappedObservables.size > 1) println("mappedObservables.size = ${mappedObservables.size}")
-            timeNotifyChangeMappedObservables.time {
-                mappedObservables.forEachSet { notifyChange() }
-            }
-        }
+    protected open fun notifyChange() {
+        mappedObservables.forEachSet { notifyChange() }
         synchronized(subscriptions) {
-            timeNotifyChangeSubscriptions.time {
-                subscriptions.forEach {
-                    it.onChange(value)
-                }
+            subscriptions.forEach {
+                it.onChange(value)
             }
         }
-        synchronized(weakSubscriptions) {
-            timeNotifyChangeWeakSubscriptions.time {
-                weakSubscriptions.forEachSet { onChange(value) }
-            }
-        }
+        weakSubscriptions.forEachSet { onChange(value) }
     }
 
-    internal open fun unsubscribe(subscription: SubscriptionImpl<T>): Unit = timeUnsubscribe.time {
+    internal open fun unsubscribe(subscription: SubscriptionImpl<T>) {
         subscriptions.remove(subscription)
         weakSubscriptions.removeIf { it.get() == null && it.get() === subscription }
         mappedObservables.removeIf { it.get() == null }

@@ -466,49 +466,37 @@ class ObservableTest : Spek({
 
             it("should be quick to join") {
 
-                val timer = Timer()
-
                 val holder = ListObservableHolder()
                 val observable = holder.listObservable
-                    .flatMap {listObservable ->
-                    listObservable.join { it.joinToString(", ") }
-                }
+                    .flatMap { listObservable ->
+                        listObservable.join { it.joinToString(", ") }
+                    }
                     .map { " - $it" }
                 var ref: String? = null
                 val s = observable.runAndOnChange { ref = observable.value }
 
-                timer.time {
-                    Assert.assertEquals(" - ", ref)
+                Assert.assertEquals(" - ", ref)
 
-                    holder.list += observable("Hello")
-                    Assert.assertEquals(" - Hello", ref)
+                holder.list += observable("Hello")
+                Assert.assertEquals(" - Hello", ref)
 
-                    holder.list += observable("World")
-                    Assert.assertEquals(" - Hello, World", ref)
+                holder.list += observable("World")
+                Assert.assertEquals(" - Hello, World", ref)
 
-                    holder.list += observable("one")
-                    Assert.assertEquals(" - Hello, World, one", ref)
+                holder.list += observable("one")
+                Assert.assertEquals(" - Hello, World, one", ref)
 
-                    holder.list += observable("two")
-                    Assert.assertEquals(" - Hello, World, one, two", ref)
+                holder.list += observable("two")
+                Assert.assertEquals(" - Hello, World, one, two", ref)
 
-                    var string = " - Hello, World, one, two"
-                    (0..1000).forEach {
-                        string += ", $it"
-                        holder.list += observable("$it")
-                        Assert.assertEquals(string, ref)
-                    }
+                var string = " - Hello, World, one, two"
+                (0..1000).forEach {
+                    string += ", $it"
+                    holder.list += observable("$it")
+                    Assert.assertEquals(string, ref)
+                }
 
                 s.unsubscribe()
-            }
-
-                observable.let { o ->
-                    println("timeNotifyChange: ${o.timeNotifyChange.millis}, timeUnsubscribe: ${o.timeUnsubscribe.millis}, WeakSubscriptions: ${o.timeNotifyChangeWeakSubscriptions.millis}, MappedObservables: ${o.timeNotifyChangeMappedObservables.millis}, ChangeSubscriptions: ${o.timeNotifyChangeSubscriptions.millis}")
-                }
-                holder.listObservable.let { o ->
-                    println("timeNotifyChange: ${o.timeNotifyChange.millis}, timeUnsubscribe: ${o.timeUnsubscribe.millis}, WeakSubscriptions: ${o.timeNotifyChangeWeakSubscriptions.millis}, MappedObservables: ${o.timeNotifyChangeMappedObservables.millis}, ChangeSubscriptions: ${o.timeNotifyChangeSubscriptions.millis}")
-                }
-                println("timer: ${timer.millis}")
 
             }
 
