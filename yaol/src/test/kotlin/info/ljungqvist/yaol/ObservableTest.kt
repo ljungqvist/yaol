@@ -77,6 +77,18 @@ class ObservableTest : Spek({
                 observable.value = "thirteen"
                 Assert.assertEquals("twelve", ref.get())
 
+                observable.onChangeUntilTrue {
+                    ref.set(it)
+                    it.length >= 6
+                }
+                Assert.assertEquals("twelve", ref.get())
+
+                observable.value = "fourteen"
+                Assert.assertEquals("fourteen", ref.get())
+
+                observable.value = "fifteen"
+                Assert.assertEquals("fourteen", ref.get())
+
 
             }
 

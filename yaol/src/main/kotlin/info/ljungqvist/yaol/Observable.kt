@@ -37,8 +37,6 @@ abstract class Observable<out T> {
     abstract val value: T
 
     private val subscriptions: MutableSet<SubscriptionImpl<T>> = Collections.synchronizedSet(HashSet())
-    private val weakSubscriptions: MutableSet<WeakReference<SubscriptionImpl<T>>> =
-        Collections.synchronizedSet(HashSet())
     private val mappedObservables: MutableSet<WeakReference<Observable<*>>> = Collections.synchronizedSet(HashSet())
 
     protected open fun notifyChange() {
@@ -48,12 +46,10 @@ abstract class Observable<out T> {
                 it.onChange(value)
             }
         }
-        weakSubscriptions.forEachSet { onChange(value) }
     }
 
     internal open fun unsubscribe(subscription: SubscriptionImpl<T>) {
         subscriptions.remove(subscription)
-        weakSubscriptions.removeIfSynchronized { it.get() == null && it.get() === subscription }
         mappedObservables.removeIfSynchronized { it.get() == null }
     }
 
@@ -61,36 +57,25 @@ abstract class Observable<out T> {
         SubscriptionImpl(this, body)
             .also { subs -> subscriptions.add(subs) }
 
-    fun onChangeWeak(body: (T) -> Unit): Subscription =
-        SubscriptionImpl(this, body)
-            .also { subs -> weakSubscriptions.add(WeakReference(subs)) }
-
     fun runAndOnChange(body: (T) -> Unit): Subscription {
         body(value)
         return onChange(body)
     }
 
-    fun runAndOnChangeWeak(body: (T) -> Unit): Subscription {
-        body(value)
-        return onChangeWeak(body)
+    fun onChangeUntilTrue(body: (T) -> Boolean) {
+        selfReference<Subscription> {
+            onChange {
+                if (body(it)) {
+                    self.unsubscribe()
+                }
+            }
+        }
     }
 
     fun runAndOnChangeUntilTrue(body: (T) -> Boolean) {
         if (!body(value)) {
             selfReference<Subscription> {
                 onChange {
-                    if (body(it)) {
-                        self.unsubscribe()
-                    }
-                }
-            }
-        }
-    }
-
-    fun runAndOnChangeUntilTrueWeak(body: (T) -> Boolean) {
-        if (!body(value)) {
-            selfReference<Subscription> {
-                onChangeWeak {
                     if (body(it)) {
                         self.unsubscribe()
                     }
