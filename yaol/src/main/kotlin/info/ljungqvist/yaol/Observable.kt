@@ -7,7 +7,11 @@ import kotlin.properties.ReadWriteProperty
 import kotlin.reflect.KProperty
 
 private inline fun <T> MutableSet<T>.removeIfSynchronized(predicate: (T) -> Boolean): Unit = synchronized(this) {
-    forEach { if (predicate(it)) remove(it) }
+    iterator().let {
+        while (it.hasNext())
+            if (predicate(it.next()))
+                it.remove()
+    }
 }
 
 private inline fun <T : Any> MutableSet<WeakReference<T>>.forEachSet(f: T.() -> Unit): Unit = synchronized(this) {
