@@ -31,23 +31,12 @@ dependencies {
     api "info.ljungqvist:yaol:$yaol_version"
 }
 
-//task sourcesJar(type: Jar, dependsOn: classes) {
-//    classifier = 'sources'
-//    from sourceSets.main.allSource
-//}
-//
-//artifacts {
-//    archives sourcesJar
-//}
-
 group = yaol_group
 version = yaol_version
 
 task sourcesJar(type: Jar) {
     from android.sourceSets.main.java.srcDirs
     classifier = 'sources'
-
-    include("**/ICatapush.java")
 }
 
 artifacts {
