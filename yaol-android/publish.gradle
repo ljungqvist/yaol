@@ -5,6 +5,7 @@ publishing {
     publications {
         Production(MavenPublication) {
             artifact("$buildDir/outputs/aar/yaol-android-release.aar")
+            artifact sourcesJar
             groupId yaol_group
             artifactId 'yaol-android'
             version yaol_version
