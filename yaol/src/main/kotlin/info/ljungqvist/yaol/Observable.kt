@@ -32,6 +32,8 @@ private inline fun <T : Any> MutableSet<WeakReference<T>>.forEachSet(f: T.() -> 
     }
 }
 
+private val onChangeUntilTrueReferenceHolder: MutableSet<Subscription> = Collections.synchronizedSet(HashSet())
+
 abstract class Observable<out T> {
 
     abstract val value: T
@@ -63,24 +65,20 @@ abstract class Observable<out T> {
     }
 
     fun onChangeUntilTrue(body: (T) -> Boolean) {
-        selfReference<Subscription> {
-            onChange {
-                if (body(it)) {
-                    self.unsubscribe()
+        onChangeUntilTrueReferenceHolder +=
+                selfReference<Subscription> {
+                    onChange {
+                        if (body(it)) {
+                            self.unsubscribe()
+                            onChangeUntilTrueReferenceHolder -= self
+                        }
+                    }
                 }
-            }
-        }
     }
 
     fun runAndOnChangeUntilTrue(body: (T) -> Boolean) {
         if (!body(value)) {
-            selfReference<Subscription> {
-                onChange {
-                    if (body(it)) {
-                        self.unsubscribe()
-                    }
-                }
-            }
+            onChangeUntilTrue(body)
         }
     }
 
