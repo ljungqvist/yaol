@@ -115,12 +115,12 @@ dependencies {
 ### Deploy local
 
 ```
-./gradlew clean yaol:build yaol:uploadArchives yaol-android:build yaol-android:uploadArchives
+./gradlew clean yaol:build yaol:publishToMavenLocal yaol-android:build yaol-android:publishToMavenLocal
 ```
 
 ### Deploy to Bintray
 
 ```
-./gradlew clean yaol:build yaol:uploadArchives yaol-android:build bintrayUpload
+./gradlew clean yaol:build yaol:publishToMavenLocal yaol-android:build bintrayUpload
 ```
 

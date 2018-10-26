@@ -1,6 +1,11 @@
 apply plugin: 'maven-publish'
 apply plugin: 'com.jfrog.bintray'
 
+task sourcesJar(type: Jar) {
+    from android.sourceSets.main.java.srcDirs
+    classifier = 'sources'
+}
+
 publishing {
     publications {
         Production(MavenPublication) {
