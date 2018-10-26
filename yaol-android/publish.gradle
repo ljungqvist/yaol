@@ -33,6 +33,7 @@ bintray {
     key = System.getenv('BINTRAY_KEY')
     publications = ['Production']
     configurations = ['archives']
+    publish = true
     override = true
     pkg {
         repo = 'yaol'

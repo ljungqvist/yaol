@@ -92,6 +92,47 @@ class ObservableTest : Spek({
 
             }
 
+            it("an Observable must be unsubscribable in OnChange") {
+
+                val o = mutableObservable(-1)
+
+                val arr = intArrayOf(-1, -1, -1, -1, -1)
+
+                fun addChangeUntilTrue(value: Int) {
+                    o.onChangeUntilTrue {
+                        arr[value] = it
+                        it == value
+                    }
+                }
+
+                addChangeUntilTrue(3)
+                addChangeUntilTrue(1)
+                addChangeUntilTrue(4)
+                addChangeUntilTrue(0)
+                addChangeUntilTrue(2)
+
+                Assert.assertArrayEquals(intArrayOf(-1, -1, -1, -1, -1), arr)
+
+                o.value = 0
+                Assert.assertArrayEquals(intArrayOf(0, 0, 0, 0, 0), arr)
+
+                o.value = 1
+                Assert.assertArrayEquals(intArrayOf(0, 1, 1, 1, 1), arr)
+
+                o.value = 2
+                Assert.assertArrayEquals(intArrayOf(0, 1, 2, 2, 2), arr)
+
+                o.value = 3
+                Assert.assertArrayEquals(intArrayOf(0, 1, 2, 3, 3), arr)
+
+                o.value = 4
+                Assert.assertArrayEquals(intArrayOf(0, 1, 2, 3, 4), arr)
+
+                o.value = 5
+                Assert.assertArrayEquals(intArrayOf(0, 1, 2, 3, 4), arr)
+
+            }
+
             it("should be mappable") {
 
                 observable.value = "test"
@@ -502,7 +543,7 @@ class ObservableTest : Spek({
                 Assert.assertEquals(" - Hello, World, one, two", ref)
 
                 var string = " - Hello, World, one, two"
-                (0..1000).forEach {
+                (0..4000).forEach {
                     string += ", $it"
                     holder.list += observable("$it")
                     Assert.assertEquals(string, ref)

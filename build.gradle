@@ -3,7 +3,7 @@
 buildscript {
     ext {
         yaol_group = 'info.ljungqvist'
-        yaol_version = '0.18'
+        yaol_version = '0.19'
         kotlin_version = '1.2.71'
     }
     repositories {
@@ -24,7 +24,7 @@ allprojects {
     repositories {
         google()
         jcenter()
-        maven { url "http://ljungqvist.info/maven" }
+        maven { url "https://dl.bintray.com/ljungqvist/yaol" }
         maven { url "https://dl.bintray.com/spekframework/spek-dev" }
         mavenLocal()
     }

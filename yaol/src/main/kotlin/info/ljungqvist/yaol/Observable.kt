@@ -44,9 +44,9 @@ abstract class Observable<out T> {
     protected open fun notifyChange() {
         mappedObservables.forEachSet { notifyChange() }
         synchronized(subscriptions) {
-            subscriptions.forEach {
-                it.onChange(value)
-            }
+            subscriptions.toList()
+        }.forEach {
+            it.onChange(value)
         }
     }
 
