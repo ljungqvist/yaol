@@ -49,7 +49,45 @@ class Store : Closeable {
 ### yaol-android
 
 ```kotlin
-// Add some sample code here
+data class Data(
+    val text: ObservableField<String>,
+    val color: ObservableInt,
+    val show: ObservableBoolean
+)
+
+fun data(
+    text: Observable<String>,
+    color: Observable<Int>,
+    show: Observable<Boolean>
+): Data = Data(
+    text.observableField(),
+    color.primitive(),
+    show.primitive()
+)
+```
+
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <data>
+
+        <import type="android.view.View" />
+
+        <variable
+            name="data"
+            type="info.ljungqvist.yaol.android.Data" />
+
+    </data>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@{data.text}"
+        android:textColor="@{data.color}"
+        android:visibility="@{data.show ? View.VISIBLE : View.GONE}" />
+
+</layout>
 ```
 
 ## Build
