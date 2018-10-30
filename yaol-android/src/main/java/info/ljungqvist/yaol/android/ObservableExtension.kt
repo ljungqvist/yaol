@@ -3,6 +3,7 @@ package info.ljungqvist.yaol.android
 import android.databinding.*
 import android.os.Handler
 import android.os.Looper
+import android.support.annotation.CheckResult
 import info.ljungqvist.yaol.Observable
 import info.ljungqvist.yaol.Subscription
 import info.ljungqvist.yaol.selfReference
@@ -11,9 +12,11 @@ import java.lang.ref.WeakReference
 private val handler by lazy { Handler(Looper.getMainLooper()) }
 private fun <T> onMain(body: (T) -> Unit): (T) -> Unit = { value -> handler.post { body(value) } }
 
+@CheckResult
 fun <T> Observable<T>.onChangeOnMain(body: (T) -> Unit): Subscription =
     onChange(onMain(body))
 
+@CheckResult
 fun <T> Observable<T>.runAndOnChangeOnMain(body: (T) -> Unit): Subscription {
     body(value)
     return onChangeOnMain(body)
@@ -43,7 +46,7 @@ private inline fun <T, O : BaseObservable> Observable<T>.databindingObservable(
             }
         }
 
-fun <T> Observable<T>.observableField(): android.databinding.ObservableField<T> =
+fun <T> Observable<T>.observableField(): ObservableField<T> =
     databindingObservable(::ObservableField) { set(it) }
 
 fun Observable<Boolean>.primitive(): ObservableBoolean =
