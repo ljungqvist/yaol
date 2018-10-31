@@ -1,8 +1,8 @@
 package info.ljungqvist.yaol.android
 
-import android.databinding.*
 import android.os.Handler
 import android.os.Looper
+import androidx.databinding.*
 import info.ljungqvist.yaol.Observable
 import info.ljungqvist.yaol.Subscription
 import info.ljungqvist.yaol.selfReference
@@ -43,7 +43,7 @@ private inline fun <T, O : BaseObservable> Observable<T>.databindingObservable(
             }
         }
 
-fun <T> Observable<T>.observableField(): android.databinding.ObservableField<T> =
+fun <T> Observable<T>.observableField(): androidx.databinding.ObservableField<T> =
     databindingObservable(::ObservableField) { set(it) }
 
 fun Observable<Boolean>.primitive(): ObservableBoolean =
