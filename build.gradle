@@ -3,7 +3,7 @@
 buildscript {
     ext {
         yaol_group = 'info.ljungqvist'
-        yaol_version = '0.19'
+        yaol_version = '0.21-two-way-map-1'
         kotlin_version = '1.2.71'
     }
     repositories {

@@ -556,4 +556,27 @@ class ObservableTest : Spek({
         }
 
     }
+
+    describe("MutableObservable") {
+
+        it("shoud be mappable to another MutableObservable") {
+            val o1 = mutableObservable("test")
+            val o2 = o1.twoWayMap({ it.toCharArray() }, { it.joinToString("") })
+
+            Assert.assertEquals(o1.value, "test")
+            Assert.assertArrayEquals(o2.value, charArrayOf('t', 'e', 's', 't'))
+
+            o1.value = "one"
+
+            Assert.assertEquals(o1.value, "one")
+            Assert.assertArrayEquals(o2.value, charArrayOf('o', 'n', 'e'))
+
+            o2.value = charArrayOf('t', 'w', 'o')
+
+            Assert.assertEquals(o1.value, "two")
+            Assert.assertArrayEquals(o2.value, charArrayOf('t', 'w', 'o'))
+
+        }
+
+    }
 })

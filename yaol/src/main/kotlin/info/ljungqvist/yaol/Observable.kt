@@ -34,30 +34,17 @@ private inline fun <T : Any> MutableSet<WeakReference<T>>.forEachSet(f: T.() -> 
 
 private val onChangeUntilTrueReferenceHolder: MutableSet<Subscription> = Collections.synchronizedSet(HashSet())
 
-abstract class Observable<out T> {
+interface Observable<out T> {
 
-    abstract val value: T
+    val value: T
 
-    private val subscriptions: MutableSet<SubscriptionImpl<T>> = Collections.synchronizedSet(HashSet())
-    private val mappedObservables: MutableSet<WeakReference<Observable<*>>> = Collections.synchronizedSet(HashSet())
+    fun notifyChange()
 
-    protected open fun notifyChange() {
-        mappedObservables.forEachSet { notifyChange() }
-        synchronized(subscriptions) {
-            subscriptions.toList()
-        }.forEach {
-            it.onChange(value)
-        }
-    }
+    fun onChange(body: (T) -> Unit): Subscription
 
-    internal open fun unsubscribe(subscription: SubscriptionImpl<T>) {
-        subscriptions.remove(subscription)
-        mappedObservables.removeIfSynchronized { it.get() == null }
-    }
+    fun addMappedObservables(observable: Observable<*>)
 
-    fun onChange(body: (T) -> Unit): Subscription =
-        SubscriptionImpl(this, body)
-            .also { subs -> subscriptions.add(subs) }
+    fun unsubscribe(subscription: Subscription)
 
     fun runAndOnChange(body: (T) -> Unit): Subscription {
         body(value)
@@ -80,10 +67,6 @@ abstract class Observable<out T> {
         if (!body(value)) {
             onChangeUntilTrue(body)
         }
-    }
-
-    internal fun addMappedObservables(observable: Observable<*>) {
-        mappedObservables.add(WeakReference(observable))
     }
 
     fun <OUT> map(mapping: (T) -> OUT): Observable<OUT> =
@@ -150,6 +133,35 @@ abstract class Observable<out T> {
 
 }
 
+abstract class ObservableImpl<out T> : Observable<T> {
+
+    private val subscriptions: MutableSet<SubscriptionImpl<T>> = Collections.synchronizedSet(HashSet())
+    private val mappedObservables: MutableSet<WeakReference<Observable<*>>> = Collections.synchronizedSet(HashSet())
+
+    override fun notifyChange() {
+        mappedObservables.forEachSet { notifyChange() }
+        synchronized(subscriptions) {
+            subscriptions.toList()
+        }.forEach {
+            it.onChange(value)
+        }
+    }
+
+    override fun unsubscribe(subscription: Subscription) {
+        subscriptions.remove(subscription)
+        mappedObservables.removeIfSynchronized { it.get() == null }
+    }
+
+    override fun onChange(body: (T) -> Unit): Subscription =
+        SubscriptionImpl(this, body)
+            .also { subs -> subscriptions.add(subs) }
+
+    override fun addMappedObservables(observable: Observable<*>) {
+        mappedObservables.add(WeakReference(observable))
+    }
+
+}
+
 fun <T> Observable<Observable<T>>.flatten(): Observable<T> = flatMap { it }
 
 fun <T, OUT> List<Observable<T>>.join(mapping: (List<T>) -> OUT): Observable<OUT> =
@@ -158,7 +170,7 @@ fun <T, OUT> List<Observable<T>>.join(mapping: (List<T>) -> OUT): Observable<OUT
             forEach { it.addMappedObservables(mapped) }
         }
 
-private class MappedObservable<T>(private val getter: () -> T) : Observable<T>() {
+internal open class MappedObservable<T>(private val getter: () -> T) : ObservableImpl<T>() {
 
     private var ref: SettableReference<T> = SettableReference.Unset
 
@@ -174,7 +186,7 @@ private class MappedObservable<T>(private val getter: () -> T) : Observable<T>()
 
 }
 
-private class FlatMappedObservable<T>(private val getter: () -> Observable<T>) : Observable<T>() {
+private class FlatMappedObservable<T>(private val getter: () -> Observable<T>) : ObservableImpl<T>() {
 
     private val notifySuper: (T) -> Unit = { super.notifyChange() }
 
@@ -198,7 +210,7 @@ private class FlatMappedObservable<T>(private val getter: () -> Observable<T>) :
         }
     }
 
-    override fun unsubscribe(subscription: SubscriptionImpl<T>) {
+    override fun unsubscribe(subscription: Subscription) {
         this.subscription?.unsubscribe()
         super.unsubscribe(subscription)
     }
@@ -213,33 +225,14 @@ private class FlatMappedObservable<T>(private val getter: () -> Observable<T>) :
 
 }
 
-open class MutableObservable<T> protected constructor(initialValue: T) : Observable<T>() {
 
-    override var value: T = initialValue
-        set(value) {
-            val update = field != value
-            field = value
-            if (update) notifyChange()
-        }
 
-}
-
-fun <T> observable(value: T): Observable<T> = object : Observable<T>() {
+fun <T> observable(value: T): Observable<T> = object : ObservableImpl<T>() {
     override val value: T = value
 }
-
-fun <T> mutableObservable(value: T): MutableObservable<T> = object : MutableObservable<T>(value) {}
 
 
 fun <T> observableProperty(observable: () -> Observable<T>): ReadOnlyProperty<Any, T> =
     object : ReadOnlyProperty<Any, T> {
         override operator fun getValue(thisRef: Any, property: KProperty<*>): T = observable().value
-    }
-
-fun <T> mutableObservableProperty(mutableObservable: () -> MutableObservable<T>): ReadWriteProperty<Any, T> =
-    object : ReadWriteProperty<Any, T> {
-        override operator fun getValue(thisRef: Any, property: KProperty<*>): T = mutableObservable().value
-        override operator fun setValue(thisRef: Any, property: KProperty<*>, value: T) {
-            mutableObservable().value = value
-        }
     }
