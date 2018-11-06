@@ -48,8 +48,9 @@ bintray {
     user = System.getenv('BINTRAY_USER')
     key = System.getenv('BINTRAY_KEY')
     publications = ['Production']
-    publish = true
+    publish = false
     override = true
+    dryRun = false
     pkg {
         repo = 'yaol'
         name = 'yaol'

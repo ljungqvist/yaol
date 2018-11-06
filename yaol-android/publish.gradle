@@ -38,8 +38,9 @@ bintray {
     key = System.getenv('BINTRAY_KEY')
     publications = ['Production']
     configurations = ['archives']
-    publish = true
+    publish = false
     override = true
+    dryRun = false
     pkg {
         repo = 'yaol'
         name = 'yaol-android'

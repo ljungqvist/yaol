@@ -29,4 +29,8 @@ dependencies {
     api "info.ljungqvist:yaol:$yaol_version"
 }
 
+group = yaol_group
+version = yaol_version
+
 apply from: 'publish.gradle'
+
