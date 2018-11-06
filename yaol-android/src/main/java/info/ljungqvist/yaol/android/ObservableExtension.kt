@@ -27,7 +27,7 @@ fun <T> Observable<T>.runAndOnChangeUntilTrueOnMain(body: (T) -> Boolean) {
         selfReference<Subscription> {
             onChangeOnMain {
                 if (body(it)) {
-                    self.unsubscribe()
+                    self.close()
                 }
             }
         }

@@ -50,6 +50,7 @@ bintray {
     publications = ['Production']
     publish = true
     override = true
+    dryRun = false
     pkg {
         repo = 'yaol'
         name = 'yaol'

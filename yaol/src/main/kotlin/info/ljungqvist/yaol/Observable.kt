@@ -56,7 +56,7 @@ interface Observable<out T> {
                 selfReference<Subscription> {
                     onChange {
                         if (body(it)) {
-                            self.unsubscribe()
+                            self.close()
                             onChangeUntilTrueReferenceHolder -= self
                         }
                     }
@@ -170,7 +170,7 @@ fun <T, OUT> List<Observable<T>>.join(mapping: (List<T>) -> OUT): Observable<OUT
             forEach { it.addMappedObservables(mapped) }
         }
 
-private open class MappedObservable<T>(private val getter: () -> T) : ObservableImpl<T>() {
+internal open class MappedObservable<T>(private val getter: () -> T) : ObservableImpl<T>() {
 
     private var ref: SettableReference<T> = SettableReference.Unset
 
@@ -184,15 +184,6 @@ private open class MappedObservable<T>(private val getter: () -> T) : Observable
         if (update) super.notifyChange()
     }
 
-}
-
-private class TwoWayMappedObservable<T>(getter: () -> T, private val setter: (T) -> Unit) : MappedObservable<T>(getter),
-    MutableObservable<T> {
-    override var value: T
-        get() = super.value
-        set(value) {
-            setter(value)
-        }
 }
 
 private class FlatMappedObservable<T>(private val getter: () -> Observable<T>) : ObservableImpl<T>() {
@@ -212,7 +203,7 @@ private class FlatMappedObservable<T>(private val getter: () -> Observable<T>) :
 
         if (ref.let({ it !== newDelegate }, { true })) {
             val update = ref.let({ it.value != newDelegate.value }, { true })
-            subscription?.unsubscribe()
+            subscription?.close()
             ref = SettableReference.Set(newDelegate)
             subscription = newDelegate.onChange(notifySuper)
             if (update) super.notifyChange()
@@ -220,7 +211,7 @@ private class FlatMappedObservable<T>(private val getter: () -> Observable<T>) :
     }
 
     override fun unsubscribe(subscription: Subscription) {
-        this.subscription?.unsubscribe()
+        this.subscription?.close()
         super.unsubscribe(subscription)
     }
 
@@ -234,43 +225,14 @@ private class FlatMappedObservable<T>(private val getter: () -> Observable<T>) :
 
 }
 
-interface MutableObservable<T> : Observable<T> {
 
-    override var value: T
-
-    fun <OUT> twoWayMap(mapping: (T) -> OUT, reverseMapping: (OUT) -> T): MutableObservable<OUT> =
-        TwoWayMappedObservable({ mapping(value) }, { value = reverseMapping(it) })
-            .also(::addMappedObservables)
-
-}
-
-open class MutableObservableImpl<T> protected constructor(initialValue: T) : ObservableImpl<T>(), MutableObservable<T> {
-
-    override var value: T = initialValue
-        set(value) = synchronized(this) {
-            val update = field != value
-            field = value
-            if (update) notifyChange()
-        }
-
-}
 
 fun <T> observable(value: T): Observable<T> = object : ObservableImpl<T>() {
     override val value: T = value
 }
 
-fun <T> mutableObservable(value: T): MutableObservable<T> = object : MutableObservableImpl<T>(value) {}
-
 
 fun <T> observableProperty(observable: () -> Observable<T>): ReadOnlyProperty<Any, T> =
     object : ReadOnlyProperty<Any, T> {
         override operator fun getValue(thisRef: Any, property: KProperty<*>): T = observable().value
-    }
-
-fun <T> mutableObservableProperty(mutableObservable: () -> MutableObservable<T>): ReadWriteProperty<Any, T> =
-    object : ReadWriteProperty<Any, T> {
-        override operator fun getValue(thisRef: Any, property: KProperty<*>): T = mutableObservable().value
-        override operator fun setValue(thisRef: Any, property: KProperty<*>, value: T) {
-            mutableObservable().value = value
-        }
     }

@@ -40,6 +40,7 @@ bintray {
     configurations = ['archives']
     publish = true
     override = true
+    dryRun = false
     pkg {
         repo = 'yaol'
         name = 'yaol-android'
