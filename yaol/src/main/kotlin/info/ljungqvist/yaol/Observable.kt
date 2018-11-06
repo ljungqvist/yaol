@@ -56,7 +56,7 @@ interface Observable<out T> {
                 selfReference<Subscription> {
                     onChange {
                         if (body(it)) {
-                            self.unsubscribe()
+                            self.close()
                             onChangeUntilTrueReferenceHolder -= self
                         }
                     }
@@ -203,7 +203,7 @@ private class FlatMappedObservable<T>(private val getter: () -> Observable<T>) :
 
         if (ref.let({ it !== newDelegate }, { true })) {
             val update = ref.let({ it.value != newDelegate.value }, { true })
-            subscription?.unsubscribe()
+            subscription?.close()
             ref = SettableReference.Set(newDelegate)
             subscription = newDelegate.onChange(notifySuper)
             if (update) super.notifyChange()
@@ -211,7 +211,7 @@ private class FlatMappedObservable<T>(private val getter: () -> Observable<T>) :
     }
 
     override fun unsubscribe(subscription: Subscription) {
-        this.subscription?.unsubscribe()
+        this.subscription?.close()
         super.unsubscribe(subscription)
     }
 

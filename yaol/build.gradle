@@ -48,7 +48,7 @@ bintray {
     user = System.getenv('BINTRAY_USER')
     key = System.getenv('BINTRAY_KEY')
     publications = ['Production']
-    publish = false
+    publish = true
     override = true
     dryRun = false
     pkg {

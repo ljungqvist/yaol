@@ -30,7 +30,7 @@ class ObservableTest : Spek({
                 observable.value = "three"
                 Assert.assertEquals("three", ref.get())
 
-                sub.unsubscribe()
+                sub.close()
                 observable.value = "four"
                 Assert.assertEquals("three", ref.get())
 
@@ -40,7 +40,7 @@ class ObservableTest : Spek({
                 observable.value = "five"
                 Assert.assertEquals("five", ref.get())
 
-                sub.unsubscribe()
+                sub.close()
                 observable.value = "six"
                 Assert.assertEquals("five", ref.get())
 
@@ -172,8 +172,8 @@ class ObservableTest : Spek({
                 Assert.assertEquals("test3", observable.value)
                 Assert.assertEquals(5, mappedObservable.value)
 
-                s1.unsubscribe()
-                s2.unsubscribe()
+                s1.close()
+                s2.close()
 
             }
 
@@ -229,9 +229,9 @@ class ObservableTest : Spek({
                 Assert.assertEquals("zero one two", res2)
                 Assert.assertEquals("zero one two three", res3)
 
-                s1.unsubscribe()
-                s2.unsubscribe()
-                s3.unsubscribe()
+                s1.close()
+                s2.close()
+                s3.close()
 
             }
 
@@ -313,10 +313,10 @@ class ObservableTest : Spek({
                 Assert.assertEquals("2test - 12", joinedObservable.value)
                 Assert.assertEquals(17, joinedObservable2.value)
 
-                s1.unsubscribe()
-                s2.unsubscribe()
-                s3.unsubscribe()
-                s4.unsubscribe()
+                s1.close()
+                s2.close()
+                s3.close()
+                s4.close()
 
             }
 
@@ -448,10 +448,10 @@ class ObservableTest : Spek({
                 Assert.assertNull(refNegative.get())
                 Assert.assertEquals("it is still true", refMapped.get())
 
-                s1.unsubscribe()
-                s2.unsubscribe()
-                s3.unsubscribe()
-                s4.unsubscribe()
+                s1.close()
+                s2.close()
+                s3.close()
+                s4.close()
 
             }
 
@@ -549,7 +549,7 @@ class ObservableTest : Spek({
                     Assert.assertEquals(string, ref)
                 }
 
-                s.unsubscribe()
+                s.close()
 
             }
 
