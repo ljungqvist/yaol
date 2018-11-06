@@ -495,9 +495,9 @@ class ObservableTest : Spek({
             it("should be joined to an observable list") {
 
                 val observableList: List<MutableObservable<String>> = listOf(
-                    mutableObservable("I"),
-                    mutableObservable("am"),
-                    mutableObservable("here.")
+                        mutableObservable("I"),
+                        mutableObservable("am"),
+                        mutableObservable("here.")
                 )
                 val listObservable = observableList.join { it.joinToString(" ") }
 
@@ -521,10 +521,10 @@ class ObservableTest : Spek({
 
                 val holder = ListObservableHolder()
                 val observable = holder.listObservable
-                    .flatMap { listObservable ->
-                        listObservable.join { it.joinToString(", ") }
-                    }
-                    .map { " - $it" }
+                        .flatMap { listObservable ->
+                            listObservable.join { it.joinToString(", ") }
+                        }
+                        .map { " - $it" }
                 var ref: String? = null
                 val s = observable.runAndOnChange { ref = observable.value }
 
@@ -559,7 +559,7 @@ class ObservableTest : Spek({
 
     describe("MutableObservable") {
 
-        it("shoud be mappable to another MutableObservable") {
+        it("should be mappable to another MutableObservable") {
             val o1 = mutableObservable("test")
             val o2 = o1.twoWayMap({ it.toCharArray() }, { it.joinToString("") })
 
@@ -575,6 +575,85 @@ class ObservableTest : Spek({
 
             Assert.assertEquals(o1.value, "two")
             Assert.assertArrayEquals(o2.value, charArrayOf('t', 'w', 'o'))
+
+        }
+
+        it("MutableObservable should be two-way joinable") {
+            val o1 = mutableObservable("one")
+            val o2 = mutableObservable(1)
+            val o3 = mutableObservable('a')
+
+            val joined = o1.twoWayJoin(o2, o3, ::Triple) { data(it.first, it.second, it.third) }
+
+            Assert.assertEquals("one", o1.value)
+            Assert.assertEquals(1, o2.value)
+            Assert.assertEquals('a', o3.value)
+            Assert.assertEquals(Triple("one", 1, 'a'), joined.value)
+
+            o1.value = "two"
+
+            Assert.assertEquals("two", o1.value)
+            Assert.assertEquals(1, o2.value)
+            Assert.assertEquals('a', o3.value)
+            Assert.assertEquals(Triple("two", 1, 'a'), joined.value)
+
+            o2.value = 2
+            o3.value = '2'
+
+            Assert.assertEquals("two", o1.value)
+            Assert.assertEquals(2, o2.value)
+            Assert.assertEquals('2', o3.value)
+            Assert.assertEquals(Triple("two", 2, '2'), joined.value)
+
+            joined.value = Triple("three", 4, 'e')
+
+            Assert.assertEquals("three", o1.value)
+            Assert.assertEquals(4, o2.value)
+            Assert.assertEquals('e', o3.value)
+            Assert.assertEquals(Triple("three", 4, 'e'), joined.value)
+
+        }
+
+        it("a list of mutable observables should be joinable") {
+
+            val o1 = mutableObservable(1.0)
+            val o2 = mutableObservable(2.0)
+            val o3 = mutableObservable(3.0)
+            val oList = listOf(o1, o2, o3)
+
+            val joined = oList.twoWayJoin(
+                { it.reversed().map { it * 2.0 } },
+                { it.map { it / 2.0 }.reversed() }
+            )
+
+            val d = 0.000001
+
+            Assert.assertEquals(1.0, o1.value, d)
+            Assert.assertEquals(2.0, o2.value, d)
+            Assert.assertEquals(3.0, o3.value, d)
+            Assert.assertEquals(listOf(6.0, 4.0, 2.0), joined.value)
+
+            o1.value = 0.1
+
+            Assert.assertEquals(0.1, o1.value, d)
+            Assert.assertEquals(2.0, o2.value, d)
+            Assert.assertEquals(3.0, o3.value, d)
+            Assert.assertEquals(listOf(6.0, 4.0, 0.2), joined.value)
+
+            o2.value = 0.2
+            o3.value = 0.3
+
+            Assert.assertEquals(0.1, o1.value, d)
+            Assert.assertEquals(0.2, o2.value, d)
+            Assert.assertEquals(0.3, o3.value, d)
+            Assert.assertEquals(listOf(0.6, 0.4, 0.2), joined.value)
+
+            joined.value = listOf(1.2, 3.4, 5.6)
+
+            Assert.assertEquals(2.8, o1.value, d)
+            Assert.assertEquals(1.7, o2.value, d)
+            Assert.assertEquals(0.6, o3.value, d)
+            Assert.assertEquals(listOf(1.2, 3.4, 5.6), joined.value)
 
         }
 
