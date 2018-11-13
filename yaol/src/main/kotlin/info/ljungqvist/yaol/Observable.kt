@@ -2,8 +2,8 @@ package info.ljungqvist.yaol
 
 import java.lang.ref.WeakReference
 import java.util.*
+import java.util.concurrent.CountDownLatch
 import kotlin.properties.ReadOnlyProperty
-import kotlin.properties.ReadWriteProperty
 import kotlin.reflect.KProperty
 
 private inline fun <T> MutableSet<T>.removeIfSynchronized(predicate: (T) -> Boolean): Unit = synchronized(this) {
@@ -32,8 +32,6 @@ private inline fun <T : Any> MutableSet<WeakReference<T>>.forEachSet(f: T.() -> 
     }
 }
 
-private val onChangeUntilTrueReferenceHolder: MutableSet<Subscription> = Collections.synchronizedSet(HashSet())
-
 interface Observable<out T> {
 
     val value: T
@@ -47,26 +45,35 @@ interface Observable<out T> {
     fun unsubscribe(subscription: Subscription)
 
     fun runAndOnChange(body: (T) -> Unit): Subscription {
-        body(value)
-        return onChange(body)
-    }
-
-    fun onChangeUntilTrue(body: (T) -> Boolean) {
-        onChangeUntilTrueReferenceHolder +=
-                selfReference<Subscription> {
-                    onChange {
-                        if (body(it)) {
-                            self.close()
-                            onChangeUntilTrueReferenceHolder -= self
-                        }
-                    }
-                }
-    }
-
-    fun runAndOnChangeUntilTrue(body: (T) -> Boolean) {
-        if (!body(value)) {
-            onChangeUntilTrue(body)
+        val latch = CountDownLatch(1)
+        val subscription = onChange {
+            latch.await()
+            body(it)
         }
+        body(value)
+        latch.countDown()
+        return subscription
+    }
+
+    fun onChangeUntilTrue(body: (T) -> Boolean): Subscription =
+        selfReference {
+            onChange {
+                if (body(it)) {
+                    self.close()
+                }
+            }
+        }
+
+    fun runAndOnChangeUntilTrue(body: (T) -> Boolean): Subscription {
+        val latch = CountDownLatch(1)
+        var ready = false
+        val subscription = onChangeUntilTrue {
+            latch.await()
+            ready || body(it)
+        }
+        ready = body(value)
+        latch.countDown()
+        return subscription
     }
 
     fun <OUT> map(mapping: (T) -> OUT): Observable<OUT> =
@@ -224,7 +231,6 @@ private class FlatMappedObservable<T>(private val getter: () -> Observable<T>) :
     }
 
 }
-
 
 
 fun <T> observable(value: T): Observable<T> = object : ObservableImpl<T>() {

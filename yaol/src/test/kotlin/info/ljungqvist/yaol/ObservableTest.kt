@@ -5,8 +5,10 @@ import org.junit.platform.runner.JUnitPlatform
 import org.junit.runner.RunWith
 import org.spekframework.spek2.Spek
 import org.spekframework.spek2.style.specification.describe
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
+import kotlin.concurrent.thread
 
 @RunWith(JUnitPlatform::class)
 class ObservableTest : Spek({
@@ -658,4 +660,39 @@ class ObservableTest : Spek({
         }
 
     }
+
+    describe("Observable being set while 'runAndOnChange' is executing its fist run") {
+
+        it("should execute a the callback for the new value") {
+
+            val result = AtomicReference("")
+            val observable = mutableObservable(1)
+            val latch1 = CountDownLatch(1)
+            val latch2 = CountDownLatch(1)
+
+            var subscription: Subscription? = null
+
+            thread {
+                subscription = observable.runAndOnChange {
+                    latch1.countDown()
+                    result.accumulateAndGet(it.toString(), String::plus)
+                    Thread.sleep(10)
+                }
+                latch2.countDown()
+            }
+
+            latch1.await()
+            observable.value = 2
+//            latch2.countDown()
+
+            latch2.await()
+
+            Assert.assertEquals("12", result.get())
+
+            subscription?.close()
+
+        }
+
+    }
+
 })

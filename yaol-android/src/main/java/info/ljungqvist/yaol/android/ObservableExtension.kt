@@ -8,6 +8,7 @@ import info.ljungqvist.yaol.Observable
 import info.ljungqvist.yaol.Subscription
 import info.ljungqvist.yaol.selfReference
 import java.lang.ref.WeakReference
+import java.util.concurrent.CountDownLatch
 
 private val handler by lazy { Handler(Looper.getMainLooper()) }
 private fun <T> onMain(body: (T) -> Unit): (T) -> Unit = { value -> handler.post { body(value) } }
@@ -17,21 +18,34 @@ fun <T> Observable<T>.onChangeOnMain(body: (T) -> Unit): Subscription =
     onChange(onMain(body))
 
 @CheckResult
-fun <T> Observable<T>.runAndOnChangeOnMain(body: (T) -> Unit): Subscription {
-    body(value)
-    return onChangeOnMain(body)
-}
+fun <T> Observable<T>.runAndOnChangeOnMain(body: (T) -> Unit): Subscription =
+    runAndOnChange(onMain(body))
 
-fun <T> Observable<T>.runAndOnChangeUntilTrueOnMain(body: (T) -> Boolean) {
-    if (!body(value)) {
-        selfReference<Subscription> {
-            onChangeOnMain {
-                if (body(it)) {
-                    self.close()
-                }
+fun <T> Observable<T>.onChangeUntilTrueOnMain(body: (T) -> Boolean): Subscription =
+    selfReference {
+        onChange(onMain {
+            if (body(it)) {
+                self.close()
+            }
+        })
+    }
+
+fun <T> Observable<T>.runAndOnChangeUntilTrueOnMain(body: (T) -> Boolean): Subscription {
+    val latch = CountDownLatch(1)
+    var ready = false
+    val subscription = selfReference<Subscription> {
+        onChangeOnMain {
+            latch.await()
+            if (ready || body(it)) {
+                self.close()
             }
         }
     }
+    handler.post {
+        ready = body(value)
+    }
+    latch.countDown()
+    return subscription
 }
 
 private inline fun <T, O : BaseObservable> Observable<T>.databindingObservable(
