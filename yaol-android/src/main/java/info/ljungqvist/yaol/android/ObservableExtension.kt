@@ -21,6 +21,7 @@ fun <T> Observable<T>.onChangeOnMain(body: (T) -> Unit): Subscription =
 fun <T> Observable<T>.runAndOnChangeOnMain(body: (T) -> Unit): Subscription =
     runAndOnChange(onMain(body))
 
+@CheckResult
 fun <T> Observable<T>.onChangeUntilTrueOnMain(body: (T) -> Boolean): Subscription =
     selfReference {
         onChange(onMain {
@@ -30,14 +31,17 @@ fun <T> Observable<T>.onChangeUntilTrueOnMain(body: (T) -> Boolean): Subscriptio
         })
     }
 
+@CheckResult
 fun <T> Observable<T>.runAndOnChangeUntilTrueOnMain(body: (T) -> Boolean): Subscription {
     val latch = CountDownLatch(1)
     var ready = false
     val subscription = selfReference<Subscription> {
-        onChangeOnMain {
+        onChange {
             latch.await()
-            if (ready || body(it)) {
-                self.close()
+            handler.post {
+                if (ready || body(it)) {
+                    self.close()
+                }
             }
         }
     }

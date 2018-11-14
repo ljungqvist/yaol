@@ -661,9 +661,9 @@ class ObservableTest : Spek({
 
     }
 
-    describe("Observable being set while 'runAndOnChange' is executing its fist run") {
+    describe("Observable being set while 'runAndOnChange' is executing its first run") {
 
-        it("should execute a the callback for the new value") {
+        it("should execute the callback for the new value") {
 
             val result = AtomicReference("")
             val observable = mutableObservable(1)
@@ -683,7 +683,6 @@ class ObservableTest : Spek({
 
             latch1.await()
             observable.value = 2
-//            latch2.countDown()
 
             latch2.await()
 
