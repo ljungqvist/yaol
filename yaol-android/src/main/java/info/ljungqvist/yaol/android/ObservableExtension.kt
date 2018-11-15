@@ -52,6 +52,8 @@ fun <T> Observable<T>.runAndOnChangeUntilTrueOnMain(body: (T) -> Boolean): Subsc
     return subscription
 }
 
+private var primitiveRefs: List<Subscription> = emptyList()
+
 private inline fun <T, O : BaseObservable> Observable<T>.databindingObservable(
     constructor: (T) -> O,
     crossinline set: O.(T) -> Unit
@@ -59,9 +61,16 @@ private inline fun <T, O : BaseObservable> Observable<T>.databindingObservable(
     constructor(value)
         .also { observable ->
             val ref = WeakReference(observable)
-            onChangeUntilTrue {
-                ref.get()?.set(it) == null
-            }
+            primitiveRefs +=
+                    selfReference<Subscription> {
+                        onChangeUntilTrue {
+                            if (ref.get()?.set(it) == null) {
+                                self.close()
+                                primitiveRefs -= self
+                                true
+                            } else false
+                        }
+                    }
         }
 
 fun <T> Observable<T>.observableField(): ObservableField<T> =
