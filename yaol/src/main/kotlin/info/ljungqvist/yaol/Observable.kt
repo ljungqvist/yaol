@@ -217,11 +217,6 @@ private class FlatMappedObservable<T>(private val getter: () -> Observable<T>) :
         }
     }
 
-    override fun unsubscribe(subscription: Subscription) {
-        this.subscription?.close()
-        super.unsubscribe(subscription)
-    }
-
     fun init() = synchronized(this) {
         ref.let({}, {
             val newDelegate = getter()

@@ -457,6 +457,50 @@ class ObservableTest : Spek({
 
             }
 
+            it("should be flat-mappable and unsubscribable") {
+
+                val o1 = mutableObservable("one")
+                val o2 = mutableObservable(1)
+                val o3 = mutableObservable(false)
+                val oMapped = o3.flatMap {
+                    if (it) {
+                        o1
+                    } else {
+                        o2.map { it.toString() }
+                    }
+                }
+                val ref1 = AtomicReference("")
+                val ref2 = AtomicReference("")
+                val s1 = oMapped.runAndOnChange(ref1::set)
+                val s2 = oMapped.runAndOnChange(ref2::set)
+
+                Assert.assertEquals("1", ref1.get())
+                Assert.assertEquals("1", ref2.get())
+                Assert.assertEquals("1", oMapped.value)
+
+                o3.value = true
+
+                Assert.assertEquals("one", ref1.get())
+                Assert.assertEquals("one", ref2.get())
+                Assert.assertEquals("one", oMapped.value)
+
+                o1.value = "two"
+
+                Assert.assertEquals("two", ref1.get())
+                Assert.assertEquals("two", ref2.get())
+                Assert.assertEquals("two", oMapped.value)
+
+                s1.close()
+                o1.value = "three"
+
+                Assert.assertEquals("two", ref1.get())
+                Assert.assertEquals("three", ref2.get())
+                Assert.assertEquals("three", oMapped.value)
+
+                s2.close()
+
+            }
+
         }
 
         context("Obervable delegates") {
