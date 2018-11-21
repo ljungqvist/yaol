@@ -668,8 +668,8 @@ class ObservableTest : Spek({
             val oList = listOf(o1, o2, o3)
 
             val joined = oList.twoWayJoin(
-                { list -> list.reversed().map { it * 2.0 } },
-                { list -> list.map { it / 2.0 }.reversed() }
+                    { list -> list.reversed().map { it * 2.0 } },
+                    { list -> list.map { it / 2.0 }.reversed() }
             )
 
             val d = 0.000001

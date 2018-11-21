@@ -1,54 +1,61 @@
 package info.ljungqvist.yaol
 
-import java.lang.ref.WeakReference
-import java.util.*
 import java.util.concurrent.CountDownLatch
 import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KProperty
 
-private inline fun <T> MutableSet<T>.removeIfSynchronized(predicate: (T) -> Boolean): Unit = synchronized(this) {
-    iterator().let {
-        while (it.hasNext())
-            if (predicate(it.next()))
-                it.remove()
-    }
-}
-
-private inline fun <T : Any> MutableSet<WeakReference<T>>.forEachSet(f: T.() -> Unit): Unit = synchronized(this) {
-    var setSize = 0
-    asSequence()
-        .mapNotNull { it.get() }
-        .forEach {
-            setSize++
-            it.f()
-        }
-    if (
-        when {
-            setSize < 10 -> size > 20
-            else -> size / setSize > 2
-        }
-    ) {
-        removeIfSynchronized { it.get() == null }
-    }
-}
-
 /**
- *
+ * The main observable interface.
+ * @param T the type of the observable
  */
 interface Observable<out T> : ReadOnlyProperty<Any, T> {
 
+    /**
+     * The value of the observable
+     */
     val value: T
 
+    /**
+     * Getter for [[ReadOnlyProperty]]
+     * @return the value
+     */
     override operator fun getValue(thisRef: Any, property: KProperty<*>): T = value
 
-    fun notifyChange()
+    /**
+     * Notify the observable that the value has changed. Should cause the listeners to be executed.
+     * Do not use from outside the observable!
+     */
+    /* protected */ fun notifyChange()
 
+    /**
+     * Add an observable depending on this observable to be notified when the value changes
+     * Do not use from outside the observable!
+     * @param the observable to be added
+     */
+    /* protected */ fun addMappedObservables(observable: Observable<*>)
+
+    /**
+     * Remove a subscription.
+     * Only to be used by [[Subscription]]s
+     * @param the subscription to be removed
+     */
+    /* internal */ fun unsubscribe(subscription: Subscription)
+
+    /**
+     * Register a function to be run when the observables value changes.
+     * Hold on to the [[Subscription]] to avoid it being GCd.
+     * @param body the function to be run
+     * @return a subscription for unsubscribing
+     */
     fun onChange(body: (T) -> Unit): Subscription
 
-    fun addMappedObservables(observable: Observable<*>)
-
-    fun unsubscribe(subscription: Subscription)
-
+    /**
+     * Register a function to be run once synchronously with the current value and then any time the
+     * observables value changes.
+     * Hold on to the [[Subscription]] to avoid it being GCd.
+     * @param body the function to be run
+     * @return a subscription for unsubscribing
+     */
     fun runAndOnChange(body: (T) -> Unit): Subscription {
         val latch = CountDownLatch(1)
         val subscription = onChange {
@@ -60,14 +67,22 @@ interface Observable<out T> : ReadOnlyProperty<Any, T> {
         return subscription
     }
 
+    /**
+     * Register a boolean function to be run when the observables value changes, until it returns
+     * true.
+     * Hold on to the [[Subscription]] to avoid it being GCd.
+     * The returned subscription will be unsubscribed once the function has returned true.
+     * @param body the function to be run
+     * @return a subscription for unsubscribing
+     */
     fun onChangeUntilTrue(body: (T) -> Boolean): Subscription =
-        selfReference {
-            onChange {
-                if (body(it)) {
-                    self.close()
+            selfReference {
+                onChange {
+                    if (body(it)) {
+                        self.close()
+                    }
                 }
             }
-        }
 
     fun runAndOnChangeUntilTrue(body: (T) -> Boolean): Subscription {
         val latch = CountDownLatch(1)
@@ -82,222 +97,65 @@ interface Observable<out T> : ReadOnlyProperty<Any, T> {
     }
 
     fun <OUT> map(mapping: (T) -> OUT): Observable<OUT> =
-        MappedObservable { mapping(value) }
-            .also(::addMappedObservables)
+            MappedObservable { mapping(value) }
+                    .also(::addMappedObservables)
 
     fun <OUT> flatMap(mapping: (T) -> Observable<OUT>): Observable<OUT> =
-        FlatMappedObservable { mapping(value) }
-            .also(::addMappedObservables)
-            .also { it.init() }
+            FlatMappedObservable { mapping(value) }
+                    .also(::addMappedObservables)
+                    .also { it.init() }
 
     fun <OUT> flatMapNullable(mapping: (T) -> Observable<OUT>?): Observable<OUT?> =
-        FlatMappedObservable { mapping(value) ?: immutableObservable(null) }
-            .also(::addMappedObservables)
-            .also { it.init() }
+            FlatMappedObservable { mapping(value) ?: immutableObservable(null) }
+                    .also(::addMappedObservables)
+                    .also { it.init() }
 
     fun <A, OUT> join(other: Observable<A>, mapping: (T, A) -> OUT): Observable<OUT> =
-        MappedObservable { mapping(value, other.value) }
-            .also { mapped ->
-                listOf(this, other).forEach { it.addMappedObservables(mapped) }
-            }
+            MappedObservable { mapping(value, other.value) }
+                    .also { mapped ->
+                        listOf(this, other).forEach { it.addMappedObservables(mapped) }
+                    }
 
     fun <A, B, OUT> join(otherA: Observable<A>, otherB: Observable<B>, mapping: (T, A, B) -> OUT): Observable<OUT> =
-        MappedObservable { mapping(value, otherA.value, otherB.value) }
-            .also { mapped ->
-                listOf(this, otherA, otherB).forEach { it.addMappedObservables(mapped) }
-            }
+            MappedObservable { mapping(value, otherA.value, otherB.value) }
+                    .also { mapped ->
+                        listOf(this, otherA, otherB).forEach { it.addMappedObservables(mapped) }
+                    }
 
     fun <A, B, C, OUT> join(
-        otherA: Observable<A>,
-        otherB: Observable<B>,
-        otherC: Observable<C>,
-        mapping: (T, A, B, C) -> OUT
+            otherA: Observable<A>,
+            otherB: Observable<B>,
+            otherC: Observable<C>,
+            mapping: (T, A, B, C) -> OUT
     ): Observable<OUT> =
-        MappedObservable { mapping(value, otherA.value, otherB.value, otherC.value) }
-            .also { mapped ->
-                listOf(this, otherA, otherB, otherC).forEach { it.addMappedObservables(mapped) }
-            }
+            MappedObservable { mapping(value, otherA.value, otherB.value, otherC.value) }
+                    .also { mapped ->
+                        listOf(this, otherA, otherB, otherC).forEach { it.addMappedObservables(mapped) }
+                    }
 
     fun <A, B, C, D, OUT> join(
-        otherA: Observable<A>,
-        otherB: Observable<B>,
-        otherC: Observable<C>,
-        otherD: Observable<D>,
-        mapping: (T, A, B, C, D) -> OUT
+            otherA: Observable<A>,
+            otherB: Observable<B>,
+            otherC: Observable<C>,
+            otherD: Observable<D>,
+            mapping: (T, A, B, C, D) -> OUT
     ): Observable<OUT> =
-        MappedObservable { mapping(value, otherA.value, otherB.value, otherC.value, otherD.value) }
-            .also { mapped ->
-                listOf(this, otherA, otherB, otherC, otherD).forEach { it.addMappedObservables(mapped) }
-            }
+            MappedObservable { mapping(value, otherA.value, otherB.value, otherC.value, otherD.value) }
+                    .also { mapped ->
+                        listOf(this, otherA, otherB, otherC, otherD).forEach { it.addMappedObservables(mapped) }
+                    }
 
     fun <A, B, C, D, E, OUT> join(
-        otherA: Observable<A>,
-        otherB: Observable<B>,
-        otherC: Observable<C>,
-        otherD: Observable<D>,
-        otherE: Observable<E>,
-        mapping: (T, A, B, C, D, E) -> OUT
+            otherA: Observable<A>,
+            otherB: Observable<B>,
+            otherC: Observable<C>,
+            otherD: Observable<D>,
+            otherE: Observable<E>,
+            mapping: (T, A, B, C, D, E) -> OUT
     ): Observable<OUT> =
-        MappedObservable { mapping(value, otherA.value, otherB.value, otherC.value, otherD.value, otherE.value) }
-            .also { mapped ->
-                listOf(this, otherA, otherB, otherC, otherD, otherE).forEach { it.addMappedObservables(mapped) }
-            }
-
-}
-
-abstract class ObservableImpl<out T> : Observable<T> {
-
-    private val subscriptions: MutableSet<SubscriptionImpl<T>> = Collections.synchronizedSet(HashSet())
-    private val mappedObservables: MutableSet<WeakReference<Observable<*>>> = Collections.synchronizedSet(HashSet())
-
-    override fun notifyChange() {
-        mappedObservables.forEachSet { notifyChange() }
-        synchronized(subscriptions) {
-            subscriptions.toList()
-        }.forEach {
-            it.onChange(value)
-        }
-    }
-
-    override fun unsubscribe(subscription: Subscription) {
-        subscriptions.remove(subscription)
-        mappedObservables.removeIfSynchronized { it.get() == null }
-    }
-
-    override fun onChange(body: (T) -> Unit): Subscription =
-        SubscriptionImpl(this, body)
-            .also { subs -> subscriptions.add(subs) }
-
-    override fun addMappedObservables(observable: Observable<*>) {
-        mappedObservables.add(WeakReference(observable))
-    }
-
-}
-
-fun <T> Observable<Observable<T>>.flatten(): Observable<T> = flatMap { it }
-
-fun <T, OUT> List<Observable<T>>.join(mapping: (List<T>) -> OUT): Observable<OUT> =
-    MappedObservable { mapping(map { it.value }) }
-        .also { mapped ->
-            forEach { it.addMappedObservables(mapped) }
-        }
-
-internal open class MappedObservable<T>(private val getter: () -> T) : ObservableImpl<T>() {
-
-    private var ref: SettableReference<T> = SettableReference.Unset
-
-    override val value: T
-        get() = ref.let({ it }, { getter() })
-
-    override fun notifyChange() = synchronized(this) {
-        val newValue = getter()
-        val update = ref.let({ it != newValue }, { true })
-        ref = SettableReference.Set(newValue)
-        if (update) super.notifyChange()
-    }
-
-}
-
-private class FlatMappedObservable<T>(private val getter: () -> Observable<T>) : ObservableImpl<T>() {
-
-    private val notifySuper: (T) -> Unit = { super.notifyChange() }
-
-    private var ref: SettableReference<Observable<T>> = SettableReference.Unset
-    private val delegate
-        get() = ref.let({ it }, { getter() })
-    private var subscription: Subscription? = null
-
-    override val value: T
-        get() = delegate.value
-
-    override fun notifyChange() = synchronized(this) {
-        val newDelegate = getter()
-
-        if (ref.let({ it !== newDelegate }, { true })) {
-            val update = ref.let({ it.value != newDelegate.value }, { true })
-            subscription?.close()
-            ref = SettableReference.Set(newDelegate)
-            subscription = newDelegate.onChange(notifySuper)
-            if (update) super.notifyChange()
-        }
-    }
-
-    fun init() = synchronized(this) {
-        ref.let({}, {
-            val newDelegate = getter()
-            ref = SettableReference.Set(newDelegate)
-            subscription = newDelegate.onChange(notifySuper)
-        })
-    }
-
-}
-
-
-fun <T> immutableObservable(value: T): Observable<T> = ImmutableObservable(value)
-
-private class ImmutableObservable<T>(override val value: T) : Observable<T> {
-
-    override fun notifyChange() = Unit
-
-    override fun onChange(body: (T) -> Unit): Subscription =
-        SubscriptionImpl(this, body)
-
-    override fun addMappedObservables(observable: Observable<*>) = Unit
-
-    override fun unsubscribe(subscription: Subscription) = Unit
-
-    override fun <OUT> map(mapping: (T) -> OUT): Observable<OUT> =
-        immutableObservable(mapping(value))
-
-    override fun <OUT> flatMap(mapping: (T) -> Observable<OUT>): Observable<OUT> =
-        mapping(value)
-
-    override fun <OUT> flatMapNullable(mapping: (T) -> Observable<OUT>?): Observable<OUT?> =
-        mapping(value) ?: immutableObservable(null)
-
-    override fun <A, OUT> join(other: Observable<A>, mapping: (T, A) -> OUT): Observable<OUT> =
-        other.map { mapping(value, it) }
-
-    override fun <A, B, OUT> join(
-        otherA: Observable<A>,
-        otherB: Observable<B>,
-        mapping: (T, A, B) -> OUT
-    ): Observable<OUT> =
-        otherA.join(otherB) { a, b ->
-            mapping(value, a, b)
-        }
-
-    override fun <A, B, C, OUT> join(
-        otherA: Observable<A>,
-        otherB: Observable<B>,
-        otherC: Observable<C>,
-        mapping: (T, A, B, C) -> OUT
-    ): Observable<OUT> =
-        otherA.join(otherB, otherC) { a, b, c ->
-            mapping(value, a, b, c)
-        }
-
-    override fun <A, B, C, D, OUT> join(
-        otherA: Observable<A>,
-        otherB: Observable<B>,
-        otherC: Observable<C>,
-        otherD: Observable<D>,
-        mapping: (T, A, B, C, D) -> OUT
-    ): Observable<OUT> =
-        otherA.join(otherB, otherC, otherD) { a, b, c, d ->
-            mapping(value, a, b, c, d)
-        }
-
-    override fun <A, B, C, D, E, OUT> join(
-        otherA: Observable<A>,
-        otherB: Observable<B>,
-        otherC: Observable<C>,
-        otherD: Observable<D>,
-        otherE: Observable<E>,
-        mapping: (T, A, B, C, D, E) -> OUT
-    ): Observable<OUT> =
-        otherA.join(otherB, otherC, otherD, otherE) { a, b, c, d, e ->
-            mapping(value, a, b, c, d, e)
-        }
+            MappedObservable { mapping(value, otherA.value, otherB.value, otherC.value, otherD.value, otherE.value) }
+                    .also { mapped ->
+                        listOf(this, otherA, otherB, otherC, otherD, otherE).forEach { it.addMappedObservables(mapped) }
+                    }
 
 }
