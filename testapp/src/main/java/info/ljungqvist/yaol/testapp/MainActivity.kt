@@ -3,17 +3,16 @@ package info.ljungqvist.yaol.testapp
 import android.content.Context
 import android.databinding.DataBindingUtil
 import android.databinding.ObservableField
-import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
+import android.support.v7.app.AppCompatActivity
 import info.ljungqvist.yaol.android.PreferenceHolder
 import info.ljungqvist.yaol.android.observableField
-import info.ljungqvist.yaol.mutableObservableProperty
 import info.ljungqvist.yaol.testapp.databinding.ActivityMainBinding
 
 class MainActivity : AppCompatActivity() {
 
     private val prefHolder by lazy { PrefHolder(this) }
-    private var testProperty by mutableObservableProperty { prefHolder.testProperty }
+    private var testProperty by prefHolder.testProperty
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

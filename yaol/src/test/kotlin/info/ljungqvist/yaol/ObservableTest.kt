@@ -462,8 +462,8 @@ class ObservableTest : Spek({
                 val o1 = mutableObservable("one")
                 val o2 = mutableObservable(1)
                 val o3 = mutableObservable(false)
-                val oMapped = o3.flatMap {
-                    if (it) {
+                val oMapped = o3.flatMap { boolean ->
+                    if (boolean) {
                         o1
                     } else {
                         o2.map { it.toString() }
@@ -507,9 +507,9 @@ class ObservableTest : Spek({
 
             class TestClass(init: String) {
                 val mutableObservable = mutableObservable(init)
-                var mutable by mutableObservableProperty { mutableObservable }
+                var mutable by mutableObservable
                 val immutableObservable = mutableObservable.map { "$it $it" }
-                val immutable by observableProperty { immutableObservable }
+                val immutable by immutableObservable
             }
 
             it("delegates properties should have the same value as the observable") {
@@ -560,7 +560,7 @@ class ObservableTest : Spek({
 
             class ListObservableHolder {
                 val listObservable: MutableObservable<List<Observable<String>>> = mutableObservable(emptyList())
-                var list by mutableObservableProperty { listObservable }
+                var list by listObservable
             }
 
             it("should be quick to join") {
@@ -576,22 +576,22 @@ class ObservableTest : Spek({
 
                 Assert.assertEquals(" - ", ref)
 
-                holder.list += observable("Hello")
+                holder.list += immutableObservable("Hello")
                 Assert.assertEquals(" - Hello", ref)
 
-                holder.list += observable("World")
+                holder.list += immutableObservable("World")
                 Assert.assertEquals(" - Hello, World", ref)
 
-                holder.list += observable("one")
+                holder.list += immutableObservable("one")
                 Assert.assertEquals(" - Hello, World, one", ref)
 
-                holder.list += observable("two")
+                holder.list += immutableObservable("two")
                 Assert.assertEquals(" - Hello, World, one, two", ref)
 
                 var string = " - Hello, World, one, two"
                 (0..1000).forEach {
                     string += ", $it"
-                    holder.list += observable("$it")
+                    holder.list += immutableObservable("$it")
                     Assert.assertEquals(string, ref)
                 }
 
@@ -668,8 +668,8 @@ class ObservableTest : Spek({
             val oList = listOf(o1, o2, o3)
 
             val joined = oList.twoWayJoin(
-                { it.reversed().map { it * 2.0 } },
-                { it.map { it / 2.0 }.reversed() }
+                { list -> list.reversed().map { it * 2.0 } },
+                { list -> list.map { it / 2.0 }.reversed() }
             )
 
             val d = 0.000001

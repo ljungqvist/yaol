@@ -12,13 +12,13 @@ class Store : Closeable {
     /**
      * number of apples
      */
-    var apples by mutableObservableProperty { applesObservable }
+    var apples by applesObservable
 
     private val applePriceObservable = mutableObservable(0.0)
     /**
      * price of apples
      */
-    var applePrice by mutableObservableProperty { applePriceObservable }
+    var applePrice by applePriceObservable
 
     // join number of apples and price into one observable
     private val totalPriceObservable =
@@ -28,7 +28,7 @@ class Store : Closeable {
     /**
      * total price
      */
-    val totalPrice by observableProperty { totalPriceObservable }
+    val totalPrice by totalPriceObservable
 
     // print the total price every time the number of apples or the price changes
     private val subscription =

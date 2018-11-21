@@ -32,9 +32,14 @@ private inline fun <T : Any> MutableSet<WeakReference<T>>.forEachSet(f: T.() -> 
     }
 }
 
-interface Observable<out T> {
+/**
+ *
+ */
+interface Observable<out T> : ReadOnlyProperty<Any, T> {
 
     val value: T
+
+    override operator fun getValue(thisRef: Any, property: KProperty<*>): T = value
 
     fun notifyChange()
 
@@ -86,7 +91,7 @@ interface Observable<out T> {
             .also { it.init() }
 
     fun <OUT> flatMapNullable(mapping: (T) -> Observable<OUT>?): Observable<OUT?> =
-        FlatMappedObservable { mapping(value) ?: observable(null) }
+        FlatMappedObservable { mapping(value) ?: immutableObservable(null) }
             .also(::addMappedObservables)
             .also { it.init() }
 
@@ -228,12 +233,17 @@ private class FlatMappedObservable<T>(private val getter: () -> Observable<T>) :
 }
 
 
-fun <T> observable(value: T): Observable<T> = object : ObservableImpl<T>() {
+fun <T> immutableObservable(value: T): Observable<T> = object : Observable<T> {
+
+    override fun notifyChange() = Unit
+
+    override fun onChange(body: (T) -> Unit): Subscription =
+        SubscriptionImpl(this, body)
+
+    override fun addMappedObservables(observable: Observable<*>) = Unit
+
+    override fun unsubscribe(subscription: Subscription) = Unit
+
     override val value: T = value
+
 }
-
-
-fun <T> observableProperty(observable: () -> Observable<T>): ReadOnlyProperty<Any, T> =
-    object : ReadOnlyProperty<Any, T> {
-        override operator fun getValue(thisRef: Any, property: KProperty<*>): T = observable().value
-    }
