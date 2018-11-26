@@ -589,7 +589,7 @@ class ObservableTest : Spek({
                 Assert.assertEquals(" - Hello, World, one, two", ref)
 
                 var string = " - Hello, World, one, two"
-                (0..1000).forEach {
+                (0..100).forEach {
                     string += ", $it"
                     holder.list += immutableObservable("$it")
                     Assert.assertEquals(string, ref)

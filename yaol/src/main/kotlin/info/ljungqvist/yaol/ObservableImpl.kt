@@ -19,7 +19,6 @@ abstract class ObservableImpl<out T> : Observable<T> {
 
     override fun unsubscribe(subscription: Subscription) {
         subscriptions.remove(subscription)
-        mappedObservables.removeIfSynchronized { it.get() == null }
     }
 
     override fun onChange(body: (T) -> Unit): Subscription =
