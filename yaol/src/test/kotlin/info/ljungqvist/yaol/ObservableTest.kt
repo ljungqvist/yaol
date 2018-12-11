@@ -541,9 +541,9 @@ class ObservableTest : Spek({
             it("should be joined to an observable list") {
 
                 val observableList: List<MutableObservable<String>> = listOf(
-                        mutableObservable("I"),
-                        mutableObservable("am"),
-                        mutableObservable("here.")
+                    mutableObservable("I"),
+                    mutableObservable("am"),
+                    mutableObservable("here.")
                 )
                 val listObservable = observableList.join { it.joinToString(" ") }
 
@@ -567,10 +567,10 @@ class ObservableTest : Spek({
 
                 val holder = ListObservableHolder()
                 val observable = holder.listObservable
-                        .flatMap { listObservable ->
-                            listObservable.join { it.joinToString(", ") }
-                        }
-                        .map { " - $it" }
+                    .flatMap { listObservable ->
+                        listObservable.join { it.joinToString(", ") }
+                    }
+                    .map { " - $it" }
                 var ref: String? = null
                 val s = observable.runAndOnChange { ref = observable.value }
 
@@ -668,8 +668,8 @@ class ObservableTest : Spek({
             val oList = listOf(o1, o2, o3)
 
             val joined = oList.twoWayJoin(
-                    { list -> list.reversed().map { it * 2.0 } },
-                    { list -> list.map { it / 2.0 }.reversed() }
+                { list -> list.reversed().map { it * 2.0 } },
+                { list -> list.map { it / 2.0 }.reversed() }
             )
 
             val d = 0.000001
@@ -733,6 +733,33 @@ class ObservableTest : Spek({
             Assert.assertEquals("12", result.get())
 
             subscription?.close()
+
+        }
+
+    }
+
+    describe("Adding a mapped observable in the onChange()") {
+
+        @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE", "UNUSED_VARIABLE")
+        it("should not be possible") {
+
+            val o1 = mutableObservable(0)
+            var o2: Observable<String>? = null
+            val o3 = o1.map {
+                o2 = o1.map { "$it - $it" }
+                it.toString()
+            }
+
+            var t: IllegalStateException? = null
+
+            try {
+                o1.value = 1
+            } catch (e: IllegalStateException) {
+                t = e
+            }
+
+            Assert.assertNotNull(t)
+            Assert.assertEquals("addMappedObservables called from inside notifyChange", t?.message)
 
         }
 

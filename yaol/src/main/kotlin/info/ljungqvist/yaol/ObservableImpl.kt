@@ -6,10 +6,17 @@ import java.util.*
 abstract class ObservableImpl<out T> : Observable<T> {
 
     private val subscriptions: MutableSet<SubscriptionImpl<T>> = Collections.synchronizedSet(HashSet())
-    private val mappedObservables: MutableSet<WeakReference<Observable<*>>> = Collections.synchronizedSet(HashSet())
+    private val mappedObservables: MutableSet<WeakReference<Observable<*>>> = HashSet()
+
+    private var inNotifyChange = false
 
     override fun notifyChange() {
-        mappedObservables.forEachSet { notifyChange() }
+        synchronized(mappedObservables) {
+            if (inNotifyChange) throw IllegalStateException("notifyChange called from inside notifyChange")
+            inNotifyChange = true
+            callMappedOnChange()
+            inNotifyChange = false
+        }
         synchronized(subscriptions) {
             subscriptions.toList()
         }.forEach {
@@ -22,38 +29,35 @@ abstract class ObservableImpl<out T> : Observable<T> {
     }
 
     override fun onChange(body: (T) -> Unit): Subscription =
-            SubscriptionImpl(this, body)
-                    .also { subs -> subscriptions.add(subs) }
+        SubscriptionImpl(this, body)
+            .also { subs -> subscriptions.add(subs) }
 
-    override fun addMappedObservables(observable: Observable<*>) {
-        mappedObservables.add(WeakReference(observable))
+    override fun addMappedObservables(observable: Observable<*>): Unit = synchronized(mappedObservables) {
+        if (inNotifyChange) throw IllegalStateException("addMappedObservables called from inside notifyChange")
+
+        if (mappedObservables.none { it.get() == observable }) {
+            mappedObservables.add(WeakReference(observable))
+        }
     }
 
-}
-
-
-private inline fun <T> MutableSet<T>.removeIfSynchronized(predicate: (T) -> Boolean): Unit = synchronized(this) {
-    iterator().let {
-        while (it.hasNext())
-            if (predicate(it.next()))
-                it.remove()
-    }
-}
-
-private inline fun <T : Any> MutableSet<WeakReference<T>>.forEachSet(f: T.() -> Unit): Unit = synchronized(this) {
-    var setSize = 0
-    asSequence()
+    private fun callMappedOnChange() {
+        var setSize = 0
+        mappedObservables
+            .asSequence()
             .mapNotNull { it.get() }
             .forEach {
                 setSize++
-                it.f()
+                it.notifyChange()
             }
-    if (
+        val size = mappedObservables.size
+        if (
             when {
                 setSize < 10 -> size > 20
                 else -> size / setSize > 2
             }
-    ) {
-        removeIfSynchronized { it.get() == null }
+        ) {
+            mappedObservables.removeIf { it.get() == null }
+        }
     }
+
 }
