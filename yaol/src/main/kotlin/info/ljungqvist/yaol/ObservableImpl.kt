@@ -56,8 +56,25 @@ abstract class ObservableImpl<out T> : Observable<T> {
                 else -> size / setSize > 2
             }
         ) {
-            mappedObservables.removeIf { it.get() == null }
+            mappedObservables.remove { it.get() == null }
         }
     }
+
+}
+
+/**
+ * Same as [java.util.Collection.removeIf] in Java 1.8
+ */
+private fun <T> MutableCollection<T>.remove(filter: (T) -> Boolean): Int {
+
+    var removed = 0
+    val it = iterator()
+    while (it.hasNext()) {
+        if (filter(it.next())) {
+            it.remove()
+            removed++
+        }
+    }
+    return removed
 
 }
