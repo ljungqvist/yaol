@@ -30,14 +30,14 @@ interface Observable<out T> : ReadOnlyProperty<Any, T> {
     /**
      * Add an observable depending on this observable to be notified when the value changes
      * Do not use from outside the observable!
-     * @param the observable to be added
+     * @param observable the observable to be added
      */
     /* protected */ fun addMappedObservables(observable: Observable<*>)
 
     /**
      * Remove a subscription.
      * Only to be used by [[Subscription]]s
-     * @param the subscription to be removed
+     * @param subscription the subscription to be removed
      */
     /* internal */ fun unsubscribe(subscription: Subscription)
 
@@ -84,6 +84,14 @@ interface Observable<out T> : ReadOnlyProperty<Any, T> {
                 }
             }
 
+    /**
+     * Register a boolean function to be run once synchronously and then when the observables value changes, until it
+     * returns true.
+     * Hold on to the [[Subscription]] to avoid it being GCd.
+     * The returned subscription will be unsubscribed once the function has returned true.
+     * @param body the function to be run
+     * @return a subscription for unsubscribing
+     */
     fun runAndOnChangeUntilTrue(body: (T) -> Boolean): Subscription {
         val latch = CountDownLatch(1)
         var ready = false
@@ -96,20 +104,45 @@ interface Observable<out T> : ReadOnlyProperty<Any, T> {
         return subscription
     }
 
+    /**
+     * Maps the observable to an [OUT] observable.
+     *
+     * @param mapping the mapping function from the value of this observable to the value of the new observable
+     * @return the mapped observable
+     */
     fun <OUT> map(mapping: (T) -> OUT): Observable<OUT> =
             MappedObservable { mapping(value) }
                     .also(::addMappedObservables)
 
+    /**
+     * Flat maps observable to an [OUT] observable by an [T] -> [Observable] mapping.
+     *
+     * @param mapping the mapping function from the value of this observable to a new observable
+     * @return the mapped observable
+     */
     fun <OUT> flatMap(mapping: (T) -> Observable<OUT>): Observable<OUT> =
             FlatMappedObservable { mapping(value) }
                     .also(::addMappedObservables)
                     .also { it.init() }
 
+    /**
+     * Same as [flatMap], bbut the mapping function may return null, resulting in an immutable observable with the
+     * value null
+     *
+     * @param mapping the mapping function
+     * @return the mapped observable
+     */
     fun <OUT> flatMapNullable(mapping: (T) -> Observable<OUT>?): Observable<OUT?> =
             FlatMappedObservable { mapping(value) ?: immutableObservable(null) }
                     .also(::addMappedObservables)
                     .also { it.init() }
 
+    /**
+     * Joins this and another observable into new observable.
+     * @param other the other observable
+     * @param mapping the function to join the observables
+     * @return the joined observable
+     */
     fun <A, OUT> join(other: Observable<A>, mapping: (T, A) -> OUT): Observable<OUT> =
             MappedObservable { mapping(value, other.value) }
                     .also { mapped ->
