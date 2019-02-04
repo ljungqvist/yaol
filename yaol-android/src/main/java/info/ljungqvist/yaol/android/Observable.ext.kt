@@ -16,9 +16,25 @@ private fun <T> onMain(body: (T) -> Unit): (T) -> Unit = { value -> handler.post
 fun <T> Observable<T>.onChangeOnMain(body: (T) -> Unit): Subscription =
         onChange(onMain(body))
 
+/**
+ * Subscribes to the observable. The supplied body will be posted on the android UI thread with the
+ * current value of the observable once and then every time the value changes.
+ *
+ * @param postFirstRunOnMain if the true first execution of [body] will be synchronously
+ * @param body the function to be executed
+ * @return a subscription for unsubscribing
+ */
 @CheckResult
-fun <T> Observable<T>.runAndOnChangeOnMain(body: (T) -> Unit): Subscription =
-        runAndOnChange(onMain(body))
+fun <T> Observable<T>.runAndOnChangeOnMain(postFirstRunOnMain: Boolean = true, body: (T) -> Unit): Subscription =
+        onMain(body).let { bodyOnMain ->
+            runAndOnChange(
+                    when (postFirstRunOnMain) {
+                        true -> bodyOnMain
+                        false -> body
+                    },
+                    bodyOnMain
+            )
+        }
 
 @CheckResult
 fun <T> Observable<T>.onChangeUntilTrueOnMain(body: (T) -> Boolean): Subscription =

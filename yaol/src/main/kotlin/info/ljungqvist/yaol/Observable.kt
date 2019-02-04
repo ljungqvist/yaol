@@ -44,6 +44,7 @@ interface Observable<out T> : ReadOnlyProperty<Any, T> {
     /**
      * Register a function to be run when the observables value changes.
      * Hold on to the [[Subscription]] to avoid it being GCd.
+     *
      * @param body the function to be run
      * @return a subscription for unsubscribing
      */
@@ -53,16 +54,26 @@ interface Observable<out T> : ReadOnlyProperty<Any, T> {
      * Register a function to be run once synchronously with the current value and then any time the
      * observables value changes.
      * Hold on to the [[Subscription]] to avoid it being GCd.
+     *
      * @param body the function to be run
      * @return a subscription for unsubscribing
      */
-    fun runAndOnChange(body: (T) -> Unit): Subscription {
+    fun runAndOnChange(body: (T) -> Unit): Subscription =
+            runAndOnChange(body, body)
+
+    /**
+     * Sanme as [runAndOnChange] (body), but with different body for the first run
+     * @param bodyFirstRun the function for the first execution
+     * @param body the function for the rest of the executions
+     * @return a subscription for unsubscribing
+     */
+    fun runAndOnChange(bodyFirstRun: (T) -> Unit, body: (T) -> Unit): Subscription {
         val latch = CountDownLatch(1)
         val subscription = onChange {
             latch.await()
             body(it)
         }
-        body(value)
+        bodyFirstRun(value)
         latch.countDown()
         return subscription
     }
