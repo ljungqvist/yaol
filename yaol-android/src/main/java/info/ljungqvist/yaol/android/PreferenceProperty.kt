@@ -3,12 +3,10 @@ package info.ljungqvist.yaol.android
 import android.content.Context
 import android.content.SharedPreferences
 import info.ljungqvist.yaol.MutableObservable
-import info.ljungqvist.yaol.MutableObservableImpl
 import info.ljungqvist.yaol.ObservableImpl
 import java.lang.ref.WeakReference
 import java.util.*
 import java.util.concurrent.CountDownLatch
-import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
 private fun <T> observables() = Collections.synchronizedMap(HashMap<Pair<String, String>, WeakReference<PreferenceObservable<T>>>())
@@ -20,9 +18,10 @@ private val longObservables = observables<Long>()
 private val floatObservables = observables<Float>()
 private val booleanObservables = observables<Boolean>()
 
+private val executor = Executors.newCachedThreadPool()
+
 abstract class PreferenceHolder(context: Context, private val name: String) {
     private val preferences: SharedPreferences = context.getSharedPreferences(name, Context.MODE_PRIVATE)
-    private val executor = Executors.newSingleThreadExecutor()
 
     private fun <T> preference(
             observables: MutableMap<Pair<String, String>, WeakReference<PreferenceObservable<T>>>,
@@ -32,7 +31,7 @@ abstract class PreferenceHolder(context: Context, private val name: String) {
             default: T
     ): MutableObservable<T> = synchronized(observables) {
         observables[name to key]?.get()
-                ?: PreferenceObservable(executor, preferences, key, get, set, default)
+                ?: PreferenceObservable(preferences, key, get, set, default)
                         .also { observables[name to key] = WeakReference(it) }
     }
 
@@ -60,7 +59,6 @@ abstract class PreferenceHolder(context: Context, private val name: String) {
 }
 
 private class PreferenceObservable<T>(
-        private val executor: ExecutorService,
         private val preferences: SharedPreferences,
         private val key: String,
         get: SharedPreferences.(String, T) -> T,

@@ -14,4 +14,5 @@ fun <A, B, C, D> data(a: A, b: B, c: C, d: D) = Data4(a, b, c, d)
 fun <A, B, C, D, E> data(a: A, b: B, c: C, d: D, e: E) = Data5(a, b, c, d, e)
 fun <A, B, C, D, E, F> data(a: A, b: B, c: C, d: D, e: E, f: F) = Data6(a, b, c, d, e, f)
 
-
+fun <A, B> Pair<A, B>.toData() = data(first, second)
+fun <A, B, C> Triple<A, B, C>.toData() = data(first, second, third)
