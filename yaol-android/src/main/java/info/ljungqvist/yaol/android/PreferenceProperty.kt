@@ -1,5 +1,6 @@
 package info.ljungqvist.yaol.android
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.SharedPreferences
 import info.ljungqvist.yaol.MutableObservable
@@ -35,25 +36,25 @@ abstract class PreferenceHolder(context: Context, private val name: String) {
                         .also { observables[name to key] = WeakReference(it) }
     }
 
-    protected fun stringPreference(key: String, default: String = ""): MutableObservable<String> =
+    fun stringPreference(key: String, default: String = ""): MutableObservable<String> =
             preference(stringObservables, SharedPreferences::getString, SharedPreferences.Editor::putString, key, default)
 
-    protected fun stringOptPreference(key: String, default: String? = null): MutableObservable<String?> =
+    fun stringOptPreference(key: String, default: String? = null): MutableObservable<String?> =
             preference(stringOptObservables, SharedPreferences::getString, SharedPreferences.Editor::putString, key, default)
 
-    protected fun stringSetPreference(key: String, default: Set<String> = emptySet()): MutableObservable<Set<String>> =
+    fun stringSetPreference(key: String, default: Set<String> = emptySet()): MutableObservable<Set<String>> =
             preference(stringSetObservables, SharedPreferences::getStringSet, SharedPreferences.Editor::putStringSet, key, default)
 
-    protected fun intPreference(key: String, default: Int = 0): MutableObservable<Int> =
+    fun intPreference(key: String, default: Int = 0): MutableObservable<Int> =
             preference(intObservables, SharedPreferences::getInt, SharedPreferences.Editor::putInt, key, default)
 
-    protected fun longPreference(key: String, default: Long = 0): MutableObservable<Long> =
+    fun longPreference(key: String, default: Long = 0): MutableObservable<Long> =
             preference(longObservables, SharedPreferences::getLong, SharedPreferences.Editor::putLong, key, default)
 
-    protected fun floatPreference(key: String, default: Float = 0f): MutableObservable<Float> =
+    fun floatPreference(key: String, default: Float = 0f): MutableObservable<Float> =
             preference(floatObservables, SharedPreferences::getFloat, SharedPreferences.Editor::putFloat, key, default)
 
-    protected fun booleanPreference(key: String, default: Boolean = false): MutableObservable<Boolean> =
+    fun booleanPreference(key: String, default: Boolean = false): MutableObservable<Boolean> =
             preference(booleanObservables, SharedPreferences::getBoolean, SharedPreferences.Editor::putBoolean, key, default)
 
 }
@@ -76,6 +77,7 @@ private class PreferenceObservable<T>(
             @Suppress("UNCHECKED_CAST")
             _value as T
         }
+        @SuppressLint("ApplySharedPref")
         set(value) = synchronized(this) {
             val update = !ready || value != _value
             _value = value
@@ -84,7 +86,7 @@ private class PreferenceObservable<T>(
             if (update) {
                 notifyChange()
                 executor.submit {
-                    preferences.edit().set(key, value).apply()
+                    preferences.edit().set(key, value).commit()
                 }
             }
         }

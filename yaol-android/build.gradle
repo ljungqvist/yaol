@@ -25,7 +25,7 @@ configurations.all {
 
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
-    api 'com.android.databinding:library:3.2.1'
+    api "com.android.databinding:library:$gradlePluginVersion"
     api "info.ljungqvist:yaol:$yaol_version"
 }
 
