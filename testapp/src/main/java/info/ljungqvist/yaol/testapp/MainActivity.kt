@@ -5,8 +5,8 @@ import android.databinding.DataBindingUtil
 import android.databinding.ObservableField
 import android.os.Bundle
 import android.support.v7.app.AppCompatActivity
-import info.ljungqvist.yaol.android.PreferenceObservableFactory
 import info.ljungqvist.yaol.android.observableField
+import info.ljungqvist.yaol.android.preferences.ObservablePreferenceFactory
 import info.ljungqvist.yaol.lazyMutableWrapper
 import info.ljungqvist.yaol.testapp.databinding.ActivityMainBinding
 import info.ljungqvist.yaol.toData
@@ -42,7 +42,7 @@ class MainActivity : AppCompatActivity() {
 }
 
 private class PrefHolder(context: Context) {
-    private val prefFactory = PreferenceObservableFactory(context, "TEST")
+    private val prefFactory = ObservablePreferenceFactory.create(context, "TEST")
 
     val testProperty = prefFactory.stringPreference("property", "")
     val testProperty2 = prefFactory.stringOptPreference("property2")
