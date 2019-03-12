@@ -19,9 +19,7 @@ private val longObservables = observables<Long>()
 private val floatObservables = observables<Float>()
 private val booleanObservables = observables<Boolean>()
 
-private val executor = Executors.newCachedThreadPool()
-
-abstract class PreferenceHolder(context: Context, private val name: String) {
+class PreferenceObservableFactory(context: Context, private val name: String) {
     private val preferences: SharedPreferences = context.getSharedPreferences(name, Context.MODE_PRIVATE)
 
     private fun <T> preference(
@@ -59,6 +57,9 @@ abstract class PreferenceHolder(context: Context, private val name: String) {
 
 }
 
+private val readExecutor = Executors.newCachedThreadPool()
+private val writeExecutor = Executors.newSingleThreadExecutor()
+
 private class PreferenceObservable<T>(
         private val preferences: SharedPreferences,
         private val key: String,
@@ -66,34 +67,33 @@ private class PreferenceObservable<T>(
         private val set: SharedPreferences.Editor.(String, T) -> SharedPreferences.Editor,
         default: T
 ) : ObservableImpl<T>(), MutableObservable<T> {
-    private val latch = CountDownLatch(1)
-    private var ready = false
 
+    private val latch = CountDownLatch(1)
     private var _value: T? = null
 
     override var value: T
         get() = run {
-            if (!ready) latch.await()
+            latch.await()
             @Suppress("UNCHECKED_CAST")
             _value as T
         }
         @SuppressLint("ApplySharedPref")
         set(value) = synchronized(this) {
-            val update = !ready || value != _value
+            latch.await()
+            val update = value != _value
             _value = value
-            ready = true
-            latch.countDown()
             if (update) {
                 notifyChange()
-                executor.submit {
-                    preferences.edit().set(key, value).commit()
+                writeExecutor.submit {
+                    preferences.edit().set(key, this.value).commit()
                 }
             }
         }
 
     init {
-        executor.submit {
-            value = preferences.get(key, default)
+        readExecutor.submit {
+            _value = preferences.get(key, default)
+            latch.countDown()
         }
     }
 

@@ -5,7 +5,7 @@ import android.databinding.DataBindingUtil
 import android.databinding.ObservableField
 import android.os.Bundle
 import android.support.v7.app.AppCompatActivity
-import info.ljungqvist.yaol.android.PreferenceHolder
+import info.ljungqvist.yaol.android.PreferenceObservableFactory
 import info.ljungqvist.yaol.android.observableField
 import info.ljungqvist.yaol.lazyMutableWrapper
 import info.ljungqvist.yaol.testapp.databinding.ActivityMainBinding
@@ -19,13 +19,14 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val binding: ActivityMainBinding = DataBindingUtil.setContentView(this, R.layout.activity_main)
+        val binding: ActivityMainBinding =
+            DataBindingUtil.setContentView(this, R.layout.activity_main)
 
         binding.data = Data(
-                prefHolder.testProperty.observableField(),
-                prefHolder.testProperty.join(prefHolder.combo) { text1, (text2, text3) ->
-                    "$text1, $text2, $text3"
-                }.observableField()
+            prefHolder.testProperty.observableField(),
+            prefHolder.testProperty.join(prefHolder.combo) { text1, (text2, text3) ->
+                "$text1, $text2, $text3"
+            }.observableField()
         )
 
         binding.button1.setOnClickListener { testProperty = "text 1" }
@@ -35,16 +36,18 @@ class MainActivity : AppCompatActivity() {
     }
 
     data class Data(
-            val value: ObservableField<String>,
-            val value2: ObservableField<String>
+        val value: ObservableField<String>,
+        val value2: ObservableField<String>
     )
 }
 
-private class PrefHolder(context: Context) : PreferenceHolder(context, "TEST") {
-    val testProperty = stringPreference("property", "")
-    val testProperty2 = stringOptPreference("property2")
+private class PrefHolder(context: Context) {
+    private val prefFactory = PreferenceObservableFactory(context, "TEST")
+
+    val testProperty = prefFactory.stringPreference("property", "")
+    val testProperty2 = prefFactory.stringOptPreference("property2")
     val combo = testProperty.twoWayJoin(
-            testProperty2,
-            ::Pair
+        testProperty2,
+        ::Pair
     ) { it.toData() }
 }
