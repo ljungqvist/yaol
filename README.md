@@ -92,6 +92,8 @@ fun data(
 
 ## Build
 
+[ ![Download](https://api.bintray.com/packages/ljungqvist/yaol/yaol/images/download.svg) ](https://bintray.com/ljungqvist/yaol/yaol/_latestVersion)
+
 ### Gradle
 
 Include <https://dl.bintray.com/ljungqvist/yaol/> amongst your repositories:
@@ -106,9 +108,9 @@ And the library amongst your dependencies:
 
 ```
 dependencies {
-    implementation 'info.ljungqvist:yaol:0.xx'
+    implementation 'info.ljungqvist:yaol:1.xx'
     // or
-    implementation 'info.ljungqvist:yaol-android:0.xx'
+    implementation 'info.ljungqvist:yaol-android:1.xx'
 }
 ```
 
