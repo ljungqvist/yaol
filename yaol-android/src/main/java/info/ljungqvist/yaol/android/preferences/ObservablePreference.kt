@@ -9,7 +9,7 @@ import java.util.concurrent.Executors
 
 
 internal class ObservablePreference<T>(
-        private val preferences: SharedPreferences,
+        private val preferences: () -> SharedPreferences,
         private val key: String,
         get: SharedPreferences.(String, T) -> T,
         private val set: SharedPreferences.Editor.(String, T) -> SharedPreferences.Editor,
@@ -33,14 +33,14 @@ internal class ObservablePreference<T>(
             if (update) {
                 notifyChange()
                 writeExecutor.submit {
-                    preferences.edit().set(key, this.value).commit()
+                    preferences().edit().set(key, this.value).commit()
                 }
             }
         }
 
     init {
         readExecutor.submit {
-            _value = preferences.get(key, default)
+            _value = preferences().get(key, default)
             latch.countDown()
         }
     }

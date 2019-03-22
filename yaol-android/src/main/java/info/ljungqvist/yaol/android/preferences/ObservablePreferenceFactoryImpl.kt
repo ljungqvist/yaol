@@ -7,8 +7,16 @@ import java.lang.ref.WeakReference
 import java.util.*
 
 
-internal class ObservablePreferenceFactoryImpl(context: Context, private val name: String) : ObservablePreferenceFactory {
-    private val preferences: SharedPreferences = context.getSharedPreferences(name, Context.MODE_PRIVATE)
+internal class ObservablePreferenceFactoryImpl(private val context: Context, private val name: String) : ObservablePreferenceFactory {
+
+    private var preferences: SharedPreferences? = null
+
+    private fun getPreferences(): SharedPreferences = synchronized(this) {
+        preferences ?: run {
+            context.getSharedPreferences(name, Context.MODE_PRIVATE)
+                .also { preferences = it }
+        }
+    }
 
     private fun <T> preference(
             observables: MutableMap<Pair<String, String>, WeakReference<ObservablePreference<T>>>,
@@ -18,7 +26,7 @@ internal class ObservablePreferenceFactoryImpl(context: Context, private val nam
             default: T
     ): MutableObservable<T> = synchronized(observables) {
         observables[name to key]?.get()
-                ?: ObservablePreference(preferences, key, get, set, default)
+                ?: ObservablePreference(::getPreferences, key, get, set, default)
                         .also { observables[name to key] = WeakReference(it) }
     }
 
