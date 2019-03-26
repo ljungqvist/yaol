@@ -8,19 +8,19 @@ import info.ljungqvist.yaol.MutableObservable
 
 interface ObservablePreferenceFactory {
 
-    fun stringPreference(key: String, default: String = ""): MutableObservable<String>
+    fun stringPreference(key: String, default: () -> String = { "" }): MutableObservable<String>
 
-    fun stringOptPreference(key: String, default: String? = null): MutableObservable<String?>
+    fun stringOptPreference(key: String, default: () -> String? = { null }): MutableObservable<String?>
 
-    fun stringSetPreference(key: String, default: Set<String> = emptySet()): MutableObservable<Set<String>>
+    fun stringSetPreference(key: String, default: () -> Set<String> = ::emptySet): MutableObservable<Set<String>>
 
-    fun intPreference(key: String, default: Int = 0): MutableObservable<Int>
+    fun intPreference(key: String, default: () -> Int = { 0 }): MutableObservable<Int>
 
-    fun longPreference(key: String, default: Long = 0): MutableObservable<Long>
+    fun longPreference(key: String, default: () -> Long = { 0 }): MutableObservable<Long>
 
-    fun floatPreference(key: String, default: Float = 0f): MutableObservable<Float>
+    fun floatPreference(key: String, default: () -> Float = { 0f }): MutableObservable<Float>
 
-    fun booleanPreference(key: String, default: Boolean = false): MutableObservable<Boolean>
+    fun booleanPreference(key: String, default: () -> Boolean = { false }): MutableObservable<Boolean>
 
     companion object {
 

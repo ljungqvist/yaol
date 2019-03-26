@@ -14,7 +14,7 @@ internal class ObservablePreferenceFactoryImpl(private val context: Context, pri
     private fun getPreferences(): SharedPreferences = synchronized(this) {
         preferences ?: run {
             context.getSharedPreferences(name, Context.MODE_PRIVATE)
-                .also { preferences = it }
+                    .also { preferences = it }
         }
     }
 
@@ -23,32 +23,32 @@ internal class ObservablePreferenceFactoryImpl(private val context: Context, pri
             get: SharedPreferences.(String, T) -> T,
             set: SharedPreferences.Editor.(String, T) -> SharedPreferences.Editor,
             key: String,
-            default: T
+            default: () -> T
     ): MutableObservable<T> = synchronized(observables) {
         observables[name to key]?.get()
                 ?: ObservablePreference(::getPreferences, key, get, set, default)
                         .also { observables[name to key] = WeakReference(it) }
     }
 
-    override fun stringPreference(key: String, default: String): MutableObservable<String> =
+    override fun stringPreference(key: String, default: () -> String): MutableObservable<String> =
             preference(stringObservables, SharedPreferences::getString, SharedPreferences.Editor::putString, key, default)
 
-    override fun stringOptPreference(key: String, default: String?): MutableObservable<String?> =
+    override fun stringOptPreference(key: String, default: () -> String?): MutableObservable<String?> =
             preference(stringOptObservables, SharedPreferences::getString, SharedPreferences.Editor::putString, key, default)
 
-    override fun stringSetPreference(key: String, default: Set<String>): MutableObservable<Set<String>> =
+    override fun stringSetPreference(key: String, default: () -> Set<String>): MutableObservable<Set<String>> =
             preference(stringSetObservables, SharedPreferences::getStringSet, SharedPreferences.Editor::putStringSet, key, default)
 
-    override fun intPreference(key: String, default: Int): MutableObservable<Int> =
+    override fun intPreference(key: String, default: () -> Int): MutableObservable<Int> =
             preference(intObservables, SharedPreferences::getInt, SharedPreferences.Editor::putInt, key, default)
 
-    override fun longPreference(key: String, default: Long): MutableObservable<Long> =
+    override fun longPreference(key: String, default: () -> Long): MutableObservable<Long> =
             preference(longObservables, SharedPreferences::getLong, SharedPreferences.Editor::putLong, key, default)
 
-    override fun floatPreference(key: String, default: Float): MutableObservable<Float> =
+    override fun floatPreference(key: String, default: () -> Float): MutableObservable<Float> =
             preference(floatObservables, SharedPreferences::getFloat, SharedPreferences.Editor::putFloat, key, default)
 
-    override fun booleanPreference(key: String, default: Boolean): MutableObservable<Boolean> =
+    override fun booleanPreference(key: String, default: () -> Boolean): MutableObservable<Boolean> =
             preference(booleanObservables, SharedPreferences::getBoolean, SharedPreferences.Editor::putBoolean, key, default)
 
 }

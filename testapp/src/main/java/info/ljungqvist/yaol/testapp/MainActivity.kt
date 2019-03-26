@@ -44,7 +44,7 @@ class MainActivity : AppCompatActivity() {
 private class PrefHolder(context: Context) {
     private val prefFactory = ObservablePreferenceFactory.create(context, "TEST")
 
-    val testProperty = prefFactory.stringPreference("property", "")
+    val testProperty = prefFactory.stringPreference("property") { "" }
     val testProperty2 = prefFactory.stringOptPreference("property2")
     val combo = testProperty.twoWayJoin(
         testProperty2,

@@ -13,7 +13,7 @@ internal class ObservablePreference<T>(
         private val key: String,
         get: SharedPreferences.(String, T) -> T,
         private val set: SharedPreferences.Editor.(String, T) -> SharedPreferences.Editor,
-        default: T
+        default: () -> T
 ) : ObservableImpl<T>(), MutableObservable<T> {
 
     private val latch = CountDownLatch(1)
@@ -40,7 +40,7 @@ internal class ObservablePreference<T>(
 
     init {
         readExecutor.submit {
-            _value = preferences().get(key, default)
+            _value = preferences().get(key, default())
             latch.countDown()
         }
     }
