@@ -4,8 +4,8 @@ import android.annotation.SuppressLint
 import android.content.SharedPreferences
 import info.ljungqvist.yaol.MutableObservable
 import info.ljungqvist.yaol.ObservableImpl
-import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
+import java.util.concurrent.Future
 
 
 internal class ObservablePreference<T>(
@@ -16,18 +16,21 @@ internal class ObservablePreference<T>(
         default: () -> T
 ) : ObservableImpl<T>(), MutableObservable<T> {
 
-    private val latch = CountDownLatch(1)
     private var _value: T? = null
+
+    private val future: Future<*> = readExecutor.submit {
+        _value = preferences().get(key, default())
+    }
 
     override var value: T
         get() = run {
-            latch.await()
+            future.get()
             @Suppress("UNCHECKED_CAST")
             _value as T
         }
         @SuppressLint("ApplySharedPref")
         set(value) = synchronized(this) {
-            latch.await()
+            future.get()
             val update = value != _value
             _value = value
             if (update) {
@@ -37,13 +40,6 @@ internal class ObservablePreference<T>(
                 }
             }
         }
-
-    init {
-        readExecutor.submit {
-            _value = preferences().get(key, default())
-            latch.countDown()
-        }
-    }
 
 }
 
