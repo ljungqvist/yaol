@@ -13,8 +13,8 @@ interface MutableObservable<T> : Observable<T>, ReadWriteProperty<Any, T> {
         this.value = value
     }
 
-    fun <OUT> twoWayMap(mapping: (T) -> OUT, reverseMapping: (OUT) -> T): MutableObservable<OUT> =
-            TwoWayMappedObservable({ mapping(value) }, { value = reverseMapping(it) })
+    fun <OUT> twoWayMap(mapping: (T) -> OUT, reverseMapping: T.(OUT) -> T): MutableObservable<OUT> =
+            TwoWayMappedObservable({ mapping(value) }, { value = value.reverseMapping(it) })
                     .also(::addMappedObservables)
 
     fun <A, OUT> twoWayJoin(

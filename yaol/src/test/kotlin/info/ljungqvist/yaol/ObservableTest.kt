@@ -624,6 +624,44 @@ class ObservableTest : Spek({
 
         }
 
+        it("should be mappable to a simpler MutableObservable") {
+            val o1 = mutableObservable("test")
+            val o2 = o1.twoWayMap<Boolean>(
+                { it.contains('a') },
+                {
+                    if (it) {
+                        this + "a"
+                    } else {
+                        this.replace("a", "")
+                    }
+                }
+            )
+
+            Assert.assertEquals(o1.value, "test")
+            Assert.assertEquals(o2.value, false)
+
+            o1.value = "one"
+
+            Assert.assertEquals(o1.value, "one")
+            Assert.assertEquals(o2.value, false)
+
+            o2.value = true
+
+            Assert.assertEquals(o1.value, "onea")
+            Assert.assertEquals(o2.value, true)
+
+            o1.value = "banana"
+
+            Assert.assertEquals(o1.value, "banana")
+            Assert.assertEquals(o2.value, true)
+
+            o2.value = false
+
+            Assert.assertEquals(o1.value, "bnn")
+            Assert.assertEquals(o2.value, false)
+
+        }
+
         it("MutableObservable should be two-way joinable") {
             val o1 = mutableObservable("one")
             val o2 = mutableObservable(1)
