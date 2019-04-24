@@ -8,18 +8,34 @@ import java.util.concurrent.Executors
 import java.util.concurrent.Future
 
 
+@SuppressLint("ApplySharedPref")
 internal class ObservablePreference<T>(
         private val preferences: () -> SharedPreferences,
         private val key: String,
         get: SharedPreferences.(String, T) -> T,
         private val set: SharedPreferences.Editor.(String, T) -> SharedPreferences.Editor,
-        default: () -> T
+        default: (SharedPreferences) -> T
 ) : ObservableImpl<T>(), MutableObservable<T> {
 
     private var _value: T? = null
 
+    private var default: T? = null
+
     private val future: Future<*> = readExecutor.submit {
-        _value = preferences().get(key, default())
+        val prefs = preferences()
+        val defaultValue = default(prefs)
+        this.default = defaultValue
+
+        _value =
+                if (defaultValue != null && !prefs.contains(key)) {
+                    writeExecutor.submit {
+                        prefs.edit().set(key, defaultValue).commit()
+                    }
+                    defaultValue
+                } else {
+                    prefs.get(key, defaultValue)
+                }
+
     }
 
     override var value: T
@@ -28,11 +44,11 @@ internal class ObservablePreference<T>(
             @Suppress("UNCHECKED_CAST")
             _value as T
         }
-        @SuppressLint("ApplySharedPref")
         set(value) = synchronized(this) {
             future.get()
-            val update = value != _value
-            _value = value
+            val newValue = value ?: default
+            val update = newValue != _value
+            _value = newValue
             if (update) {
                 notifyChange()
                 writeExecutor.submit {
@@ -41,7 +57,10 @@ internal class ObservablePreference<T>(
             }
         }
 
+    companion object {
+        val readExecutor = Executors.newCachedThreadPool()
+        private val writeExecutor = Executors.newSingleThreadExecutor()
+    }
+
 }
 
-private val readExecutor = Executors.newCachedThreadPool()
-private val writeExecutor = Executors.newSingleThreadExecutor()

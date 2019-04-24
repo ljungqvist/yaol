@@ -1,26 +1,30 @@
 package info.ljungqvist.yaol.android.preferences
 
 import android.content.Context
+import android.content.SharedPreferences
 import android.os.Build
 import android.preference.PreferenceManager
 import info.ljungqvist.yaol.MutableObservable
+import java.util.concurrent.Future
 
 
 interface ObservablePreferenceFactory {
 
-    fun stringPreference(key: String, default: () -> String = { "" }): MutableObservable<String>
+    fun stringPreference(key: String, default: (SharedPreferences) -> String = { "" }): MutableObservable<String>
 
-    fun stringOptPreference(key: String, default: () -> String? = { null }): MutableObservable<String?>
+    fun stringOptPreference(key: String, default: (SharedPreferences) -> String? = { null }): MutableObservable<String?>
 
-    fun stringSetPreference(key: String, default: () -> Set<String> = ::emptySet): MutableObservable<Set<String>>
+    fun stringSetPreference(key: String, default: (SharedPreferences) -> Set<String> = { emptySet() }): MutableObservable<Set<String>>
 
-    fun intPreference(key: String, default: () -> Int = { 0 }): MutableObservable<Int>
+    fun intPreference(key: String, default: (SharedPreferences) -> Int = { 0 }): MutableObservable<Int>
 
-    fun longPreference(key: String, default: () -> Long = { 0 }): MutableObservable<Long>
+    fun longPreference(key: String, default: (SharedPreferences) -> Long = { 0 }): MutableObservable<Long>
 
-    fun floatPreference(key: String, default: () -> Float = { 0f }): MutableObservable<Float>
+    fun floatPreference(key: String, default: (SharedPreferences) -> Float = { 0f }): MutableObservable<Float>
 
-    fun booleanPreference(key: String, default: () -> Boolean = { false }): MutableObservable<Boolean>
+    fun booleanPreference(key: String, default: (SharedPreferences) -> Boolean = { false }): MutableObservable<Boolean>
+
+    fun <T> migrate(body: (SharedPreferences) -> T): Future<T>
 
     companion object {
 

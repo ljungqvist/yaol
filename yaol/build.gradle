@@ -32,6 +32,11 @@ compileTestKotlin {
     kotlinOptions.jvmTarget = "1.6"
 }
 
+task sourcesJar(type: Jar, dependsOn: classes) {
+    classifier = 'sources'
+    from sourceSets.main.allSource
+}
+
 publishing {
     publications {
         Production(MavenPublication) {
@@ -63,9 +68,4 @@ bintray {
             vcsTag = "v$yaol_version"
         }
     }
-}
-
-task sourcesJar(type: Jar, dependsOn: classes) {
-    classifier = 'sources'
-    from sourceSets.main.allSource
 }
