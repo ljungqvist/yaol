@@ -1,5 +1,6 @@
 package info.ljungqvist.yaol
 
+import mu.KotlinLogging
 import java.lang.ref.WeakReference
 import java.util.*
 
@@ -14,8 +15,14 @@ abstract class ObservableImpl<out T> : Observable<T> {
         synchronized(mappedObservables) {
             if (inNotifyChange) throw IllegalStateException("notifyChange called from inside notifyChange")
             inNotifyChange = true
-            callMappedOnChange()
-            inNotifyChange = false
+            try {
+                callMappedOnChange()
+            } catch (e: Exception) {
+                logger.error(e) { "callMappedOnChange failed" }
+                throw e
+            } finally {
+                inNotifyChange = false
+            }
         }
         synchronized(subscriptions) {
             subscriptions.toList()
@@ -41,14 +48,14 @@ abstract class ObservableImpl<out T> : Observable<T> {
     }
 
     private fun callMappedOnChange() {
-        var setSize = 0
-        mappedObservables
-            .asSequence()
-            .mapNotNull { it.get() }
-            .forEach {
-                setSize++
-                it.notifyChange()
-            }
+        val setSize =
+            mappedObservables
+                .asSequence()
+                .mapNotNull { it.get() }
+                .fold(0) { size, observable ->
+                    observable.notifyChange()
+                    size + 1
+                }
         val size = mappedObservables.size
         if (
             when {
@@ -78,3 +85,5 @@ private fun <T> MutableCollection<T>.remove(filter: (T) -> Boolean): Int {
     return removed
 
 }
+
+private val logger = KotlinLogging.logger { }
