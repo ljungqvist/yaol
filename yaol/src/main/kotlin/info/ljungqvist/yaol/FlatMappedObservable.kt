@@ -25,12 +25,12 @@ internal class FlatMappedObservable<T>(private val getter: () -> Observable<T>) 
         }
     }
 
-    fun init() = synchronized(this) {
-        ref.let({}, {
+    fun init() = ref.let({}) {
+        synchronized(this) {
             val newDelegate = getter()
             ref = SettableReference.Set(newDelegate)
             subscription = newDelegate.onChange(notifySuper)
-        })
+        }
     }
 
 }
