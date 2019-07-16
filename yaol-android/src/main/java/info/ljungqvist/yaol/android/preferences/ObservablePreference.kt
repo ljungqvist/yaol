@@ -50,10 +50,10 @@ internal class ObservablePreference<T>(
             val update = newValue != _value
             _value = newValue
             if (update) {
-                notifyChange()
                 writeExecutor.submit {
                     preferences().edit().set(key, this.value).commit()
                 }
+                notifyChange()
             }
         }
 
