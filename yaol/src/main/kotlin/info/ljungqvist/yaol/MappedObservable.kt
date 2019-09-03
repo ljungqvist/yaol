@@ -6,16 +6,20 @@ internal open class MappedObservable<T>(private val getter: () -> T) : Observabl
     private var ref: SettableReference<T> = SettableReference.Unset
 
     override val value: T
-        get() = ref.let({ it }) {
-            synchronized(this) {
-                getter().also { ref = SettableReference.Set(it) }
-            }
+        get() = synchronized(this) {
+            ref.let(
+                { it },
+                { getter().also { ref = SettableReference.Set(it) } }
+            )
         }
 
-    override fun notifyChange() = synchronized(this) {
-        val newValue = getter()
-        val update = ref.let({ it != newValue }, { true })
-        ref = SettableReference.Set(newValue)
+    override fun notifyChange() {
+        val update: Boolean
+        synchronized(this) {
+            val newValue = getter()
+            update = ref.let({ it != newValue }, { true })
+            ref = SettableReference.Set(newValue)
+        }
         if (update) super.notifyChange()
     }
 

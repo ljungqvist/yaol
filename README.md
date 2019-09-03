@@ -117,12 +117,12 @@ dependencies {
 ### Deploy local
 
 ```
-./gradlew clean yaol:build yaol:publishToMavenLocal yaol-android:build yaol-android:publishToMavenLocal
+./gradlew clean && ./gradlew yaol:build && ./gradlew yaol:publishToMavenLocal && ./gradlew yaol-android:build && ./gradlew yaol-android:publishToMavenLocal
 ```
 
 ### Deploy to Bintray
 
 ```
-./gradlew clean yaol:build yaol:publishToMavenLocal yaol-android:build bintrayUpload
+./gradlew clean && ./gradlew yaol:build && ./gradlew yaol:publishToMavenLocal && ./gradlew yaol-android:build && ./gradlew bintrayUpload
 ```
 
