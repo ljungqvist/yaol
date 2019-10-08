@@ -3,9 +3,9 @@
 buildscript {
     ext {
         yaol_group = 'info.ljungqvist'
-        yaol_version = '1.6.4'
+        yaol_version = '1.7'
         kotlin_version = '1.3.50'
-        gradlePluginVersion = '3.5.0'
+        gradlePluginVersion = '3.5.1'
     }
     repositories {
         google()

@@ -15,6 +15,8 @@ class MainActivity : AppCompatActivity() {
 
     private val prefHolder by lazy { PrefHolder(this) }
     private var testProperty by lazyMutableWrapper { prefHolder.testProperty }
+    private var testProperty2 by lazyMutableWrapper { prefHolder.testProperty2 }
+    private var combo by lazyMutableWrapper { prefHolder.combo }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -24,14 +26,20 @@ class MainActivity : AppCompatActivity() {
 
         binding.data = Data(
             prefHolder.testProperty.observableField(),
-            prefHolder.testProperty.join(prefHolder.combo) { text1, (text2, text3) ->
-                "$text1, $text2, $text3"
+            prefHolder.testProperty.join(prefHolder.testProperty2, prefHolder.combo) { text1, text2, (textcombo1, textcombo2) ->
+                "$text1, $text2, ($textcombo1, $textcombo2)"
             }.observableField()
         )
 
-        binding.button1.setOnClickListener { testProperty = "text 1" }
-        binding.button2.setOnClickListener { testProperty = "text 2" }
-        binding.button3.setOnClickListener { testProperty = "text 3" }
+        binding.button1.setOnClickListener {
+            testProperty = "text 1"
+        }
+        binding.button2.setOnClickListener {
+            testProperty2 = "text 2"
+        }
+        binding.button3.setOnClickListener {
+            combo = "first text 3" to "second text 3"
+        }
 
     }
 

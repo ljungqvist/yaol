@@ -5,10 +5,9 @@ internal class FlatMappedObservable<T>(private val getter: () -> Observable<T>) 
 
     private val notifySuper: (T) -> Unit = { super.notifyChange() }
 
-    private var ref: SettableReference<Observable<T>> = SettableReference.Unset
-    private val delegate
-        get() = ref.let({ it }, { getter() })
-    private var subscription: Subscription? = null
+    private var delegate = getter()
+
+    private var subscription: Subscription = delegate.onChange(notifySuper)
 
     override val value: T
         get() = delegate.value
@@ -16,20 +15,12 @@ internal class FlatMappedObservable<T>(private val getter: () -> Observable<T>) 
     override fun notifyChange() = synchronized(this) {
         val newDelegate = getter()
 
-        if (ref.let({ it !== newDelegate }, { true })) {
-            val update = ref.let({ it.value != newDelegate.value }, { true })
-            subscription?.close()
-            ref = SettableReference.Set(newDelegate)
+        if (delegate !== newDelegate) {
+            val update = delegate.value != newDelegate.value
+            subscription.close()
+            delegate = newDelegate
             subscription = newDelegate.onChange(notifySuper)
             if (update) super.notifyChange()
-        }
-    }
-
-    fun init() = ref.let({}) {
-        synchronized(this) {
-            val newDelegate = getter()
-            ref = SettableReference.Set(newDelegate)
-            subscription = newDelegate.onChange(notifySuper)
         }
     }
 

@@ -134,7 +134,6 @@ interface Observable<out T> : ReadOnlyProperty<Any, T> {
     fun <OUT> flatMap(mapping: (T) -> Observable<OUT>): Observable<OUT> =
             FlatMappedObservable { mapping(value) }
                     .also(::addMappedObservables)
-                    .also { it.init() }
 
     /**
      * Same as [flatMap], bbut the mapping function may return null, resulting in an immutable observable with the
@@ -146,7 +145,6 @@ interface Observable<out T> : ReadOnlyProperty<Any, T> {
     fun <OUT> flatMapNullable(mapping: (T) -> Observable<OUT>?): Observable<OUT?> =
             FlatMappedObservable { mapping(value) ?: immutableObservable(null) }
                     .also(::addMappedObservables)
-                    .also { it.init() }
 
     /**
      * Joins this and another observable into new observable.
