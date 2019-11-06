@@ -4,6 +4,7 @@ import android.databinding.*
 import android.os.Handler
 import android.os.Looper
 import android.support.annotation.CheckResult
+import android.support.annotation.Keep
 import info.ljungqvist.yaol.Observable
 import info.ljungqvist.yaol.Subscription
 import info.ljungqvist.yaol.selfReference
@@ -68,7 +69,7 @@ fun <T> Observable<T>.runAndOnChangeUntilTrueOnMain(body: (T) -> Boolean): Subsc
 }
 
 @Suppress("unused")
-private class ReferenceHoldingOnPropertyChangedCallback(private vararg val hardReferences: Any)
+private class ReferenceHoldingOnPropertyChangedCallback(@Keep private vararg val hardReferences: Any)
     : android.databinding.Observable.OnPropertyChangedCallback() {
     override fun onPropertyChanged(sender: android.databinding.Observable?, propertyId: Int) = Unit
 }
