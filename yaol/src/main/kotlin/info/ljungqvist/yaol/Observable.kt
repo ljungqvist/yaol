@@ -111,6 +111,7 @@ interface Observable<out T> : ReadOnlyProperty<Any, T> {
             ready || body(it)
         }
         ready = body(value)
+        if (ready) subscription.close()
         latch.countDown()
         return subscription
     }
