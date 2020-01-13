@@ -1,10 +1,10 @@
 package info.ljungqvist.yaol.testapp
 
 import android.content.Context
-import android.databinding.DataBindingUtil
-import android.databinding.ObservableField
 import android.os.Bundle
-import android.support.v7.app.AppCompatActivity
+import androidx.appcompat.app.AppCompatActivity
+import androidx.databinding.DataBindingUtil
+import androidx.databinding.ObservableField
 import info.ljungqvist.yaol.android.observableField
 import info.ljungqvist.yaol.android.preferences.ObservablePreferenceFactory
 import info.ljungqvist.yaol.lazyMutableWrapper
@@ -22,13 +22,13 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
 
         val binding: ActivityMainBinding =
-            DataBindingUtil.setContentView(this, R.layout.activity_main)
+                DataBindingUtil.setContentView(this, R.layout.activity_main)
 
         binding.data = Data(
-            prefHolder.testProperty.observableField(),
-            prefHolder.testProperty.join(prefHolder.testProperty2, prefHolder.combo) { text1, text2, (textcombo1, textcombo2) ->
-                "$text1, $text2, ($textcombo1, $textcombo2)"
-            }.observableField()
+                prefHolder.testProperty.observableField(),
+                prefHolder.testProperty.join(prefHolder.testProperty2, prefHolder.combo) { text1, text2, (textcombo1, textcombo2) ->
+                    "$text1, $text2, ($textcombo1, $textcombo2)"
+                }.observableField()
         )
 
         binding.button1.setOnClickListener {
@@ -44,8 +44,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     data class Data(
-        val value: ObservableField<String>,
-        val value2: ObservableField<String>
+            val value: ObservableField<String>,
+            val value2: ObservableField<String>
     )
 }
 
@@ -55,7 +55,7 @@ private class PrefHolder(context: Context) {
     val testProperty = prefFactory.stringPreference("property") { "" }
     val testProperty2 = prefFactory.stringOptPreference("property2")
     val combo = testProperty.twoWayJoin(
-        testProperty2,
-        ::Pair
+            testProperty2,
+            ::Pair
     ) { it.toData() }
 }

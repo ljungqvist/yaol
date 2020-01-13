@@ -32,7 +32,13 @@ internal class ObservablePreferenceFactoryImpl(private val context: Context, pri
     }
 
     override fun stringPreference(key: String, default: (SharedPreferences) -> String): MutableObservable<String> =
-            preference(stringObservables, SharedPreferences::getString, SharedPreferences.Editor::putString, key, default)
+            preference(
+                    stringObservables,
+                    { k, d -> getString(k, d) ?: d },
+                    SharedPreferences.Editor::putString,
+                    key,
+                    default
+            )
 
     override fun stringOptPreference(key: String, default: (SharedPreferences) -> String?): MutableObservable<String?> =
             preference(
@@ -46,7 +52,7 @@ internal class ObservablePreferenceFactoryImpl(private val context: Context, pri
     override fun stringSetPreference(key: String, default: (SharedPreferences) -> Set<String>): MutableObservable<Set<String>> =
             preference(
                     stringSetObservables,
-                    SharedPreferences::getStringSet,
+                    { k, d -> getStringSet(k, d) ?: d },
                     SharedPreferences.Editor::putStringSet,
                     key,
                     default
