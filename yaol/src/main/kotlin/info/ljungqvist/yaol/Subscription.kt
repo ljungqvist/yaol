@@ -22,7 +22,6 @@ internal class SubscriptionImpl<in T>(observable: Observable<T>, onChange: (T) -
 
     internal fun onChange(value: T) = data
         ?.let { (_, onChange) -> onChange(value) }
-        ?: throw IllegalStateException("Subscription has already been closed")
 
     private data class Data<T>(val observable: Observable<T>, val onChange: (T) -> Unit)
 
