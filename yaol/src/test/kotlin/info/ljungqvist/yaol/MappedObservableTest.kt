@@ -14,6 +14,8 @@ class MappedObservableTest {
 
         var onChangeRun = false
 
+        // keep [sub] to avoid GC
+        @Suppress("UNUSED_VARIABLE")
         val sub = o3.onChange {
             onChangeRun = true
         }

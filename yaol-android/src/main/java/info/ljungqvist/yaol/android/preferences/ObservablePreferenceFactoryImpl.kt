@@ -3,6 +3,7 @@ package info.ljungqvist.yaol.android.preferences
 import android.content.Context
 import android.content.SharedPreferences
 import info.ljungqvist.yaol.MutableObservable
+import java.lang.ref.WeakReference
 import java.util.*
 import java.util.concurrent.Callable
 import java.util.concurrent.Future
@@ -20,15 +21,16 @@ internal class ObservablePreferenceFactoryImpl(private val context: Context, pri
     }
 
     private fun <T> preference(
-            observables: MutableMap<Pair<String, String>, ObservablePreference<T>>,
+            observables: ObservablesMap<T>,
             get: SharedPreferences.(String, T) -> T,
             set: SharedPreferences.Editor.(String, T) -> SharedPreferences.Editor,
             key: String,
             default: (SharedPreferences) -> T
     ): MutableObservable<T> = synchronized(observables) {
         observables[name to key]
+                ?.get()
                 ?: ObservablePreference(::getPreferences, key, get, set, default)
-                        .also { observables[name to key] = it }
+                        .also { observables[name to key] = WeakReference(it) }
     }
 
     override fun stringPreference(key: String, default: (SharedPreferences) -> String): MutableObservable<String> =
@@ -83,11 +85,15 @@ internal class ObservablePreferenceFactoryImpl(private val context: Context, pri
 
 }
 
-private fun <T> observables() = Collections.synchronizedMap(HashMap<Pair<String, String>, ObservablePreference<T>>())
-private val stringObservables = observables<String>()
-private val stringOptObservables = observables<String?>()
-private val stringSetObservables = observables<Set<String>>()
-private val intObservables = observables<Int>()
-private val longObservables = observables<Long>()
-private val floatObservables = observables<Float>()
-private val booleanObservables = observables<Boolean>()
+private typealias ObservablesMap<T> = MutableMap<Pair<String, String>, WeakReference<ObservablePreference<T>>>
+
+private fun <T> observables(): ObservablesMap<T> =
+        Collections.synchronizedMap(HashMap<Pair<String, String>, WeakReference<ObservablePreference<T>>>())
+
+private val stringObservables: ObservablesMap<String> = observables()
+private val stringOptObservables: ObservablesMap<String?> = observables()
+private val stringSetObservables: ObservablesMap<Set<String>> = observables()
+private val intObservables: ObservablesMap<Int> = observables()
+private val longObservables: ObservablesMap<Long> = observables()
+private val floatObservables: ObservablesMap<Float> = observables()
+private val booleanObservables: ObservablesMap<Boolean> = observables()
