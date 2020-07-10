@@ -57,5 +57,5 @@ private class PrefHolder(context: Context) {
     val combo = testProperty.twoWayJoin(
             testProperty2,
             ::Pair
-    ) { it.toData() }
+    ) { _, pair -> pair.toData() }
 }

@@ -3,6 +3,8 @@ package info.ljungqvist.yaol
 import kotlin.properties.ReadWriteProperty
 import kotlin.reflect.KProperty
 
+typealias ReverseMapping<FROM, TO> = (currentValue: FROM, mappedValue: TO) -> FROM
+
 interface MutableObservable<T> : Observable<T>, ReadWriteProperty<Any, T> {
 
     override var value: T
@@ -13,19 +15,19 @@ interface MutableObservable<T> : Observable<T>, ReadWriteProperty<Any, T> {
         this.value = value
     }
 
-    fun <OUT> twoWayMap(mapping: (T) -> OUT, reverseMapping: T.(OUT) -> T): MutableObservable<OUT> =
-            TwoWayMappedObservable({ mapping(value) }, { value = value.reverseMapping(it) })
+    fun <OUT> twoWayMap(mapping: (T) -> OUT, reverseMapping: ReverseMapping<T, OUT>): MutableObservable<OUT> =
+            TwoWayMappedObservable({ mapping(value) }, { value = reverseMapping(value, it) })
                     .also(::addMappedObservables)
 
     fun <A, OUT> twoWayJoin(
             other: MutableObservable<A>,
             mapping: (T, A) -> OUT,
-            reverseMapping: (OUT) -> Data2<T, A>
+            reverseMapping: ReverseMapping<Data2<T, A>, OUT>
     ): MutableObservable<OUT> =
             TwoWayMappedObservable(
                     { mapping(value, other.value) },
                     {
-                        reverseMapping(it).let { (t, a) ->
+                        reverseMapping(data(value, other.value), it).let { (t, a) ->
                             value = t
                             other.value = a
                         }
@@ -38,12 +40,12 @@ interface MutableObservable<T> : Observable<T>, ReadWriteProperty<Any, T> {
             otherA: MutableObservable<A>,
             otherB: MutableObservable<B>,
             mapping: (T, A, B) -> OUT,
-            reverseMapping: (OUT) -> Data3<T, A, B>
+            reverseMapping: ReverseMapping<Data3<T, A, B>, OUT>
     ): MutableObservable<OUT> =
             TwoWayMappedObservable(
                     { mapping(value, otherA.value, otherB.value) },
                     {
-                        reverseMapping(it).let { (t, a, b) ->
+                        reverseMapping(data(value, otherA.value, otherB.value), it).let { (t, a, b) ->
                             value = t
                             otherA.value = a
                             otherB.value = b
@@ -58,12 +60,12 @@ interface MutableObservable<T> : Observable<T>, ReadWriteProperty<Any, T> {
             otherB: MutableObservable<B>,
             otherC: MutableObservable<C>,
             mapping: (T, A, B, C) -> OUT,
-            reverseMapping: (OUT) -> Data4<T, A, B, C>
+            reverseMapping: ReverseMapping<Data4<T, A, B, C>, OUT>
     ): MutableObservable<OUT> =
             TwoWayMappedObservable(
                     { mapping(value, otherA.value, otherB.value, otherC.value) },
                     {
-                        reverseMapping(it).let { (t, a, b, c) ->
+                        reverseMapping(data(value, otherA.value, otherB.value, otherC.value), it).let { (t, a, b, c) ->
                             value = t
                             otherA.value = a
                             otherB.value = b
@@ -80,12 +82,12 @@ interface MutableObservable<T> : Observable<T>, ReadWriteProperty<Any, T> {
             otherC: MutableObservable<C>,
             otherD: MutableObservable<D>,
             mapping: (T, A, B, C, D) -> OUT,
-            reverseMapping: (OUT) -> Data5<T, A, B, C, D>
+            reverseMapping: ReverseMapping<Data5<T, A, B, C, D>, OUT>
     ): MutableObservable<OUT> =
             TwoWayMappedObservable(
                     { mapping(value, otherA.value, otherB.value, otherC.value, otherD.value) },
                     {
-                        reverseMapping(it).let { (t, a, b, c, d) ->
+                        reverseMapping(data(value, otherA.value, otherB.value, otherC.value, otherD.value), it).let { (t, a, b, c, d) ->
                             value = t
                             otherA.value = a
                             otherB.value = b
@@ -104,12 +106,12 @@ interface MutableObservable<T> : Observable<T>, ReadWriteProperty<Any, T> {
             otherD: MutableObservable<D>,
             otherE: MutableObservable<E>,
             mapping: (T, A, B, C, D, E) -> OUT,
-            reverseMapping: (OUT) -> Data6<T, A, B, C, D, E>
+            reverseMapping: ReverseMapping<Data6<T, A, B, C, D, E>, OUT>
     ): MutableObservable<OUT> =
             TwoWayMappedObservable(
                     { mapping(value, otherA.value, otherB.value, otherC.value, otherD.value, otherE.value) },
                     {
-                        reverseMapping(it).let { (t, a, b, c, d, e) ->
+                        reverseMapping(data(value, otherA.value, otherB.value, otherC.value, otherD.value, otherE.value), it).let { (t, a, b, c, d, e) ->
                             value = t
                             otherA.value = a
                             otherB.value = b

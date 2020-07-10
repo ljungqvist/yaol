@@ -541,9 +541,9 @@ class ObservableTest : Spek({
             it("should be joined to an observable list") {
 
                 val observableList: List<MutableObservable<String>> = listOf(
-                    mutableObservable("I"),
-                    mutableObservable("am"),
-                    mutableObservable("here.")
+                        mutableObservable("I"),
+                        mutableObservable("am"),
+                        mutableObservable("here.")
                 )
                 val listObservable = observableList.join { it.joinToString(" ") }
 
@@ -567,10 +567,10 @@ class ObservableTest : Spek({
 
                 val holder = ListObservableHolder()
                 val observable = holder.listObservable
-                    .flatMap { listObservable ->
-                        listObservable.join { it.joinToString(", ") }
-                    }
-                    .map { " - $it" }
+                        .flatMap { listObservable ->
+                            listObservable.join { it.joinToString(", ") }
+                        }
+                        .map { " - $it" }
                 var ref: String? = null
                 val s = observable.runAndOnChange { ref = observable.value }
 
@@ -607,7 +607,7 @@ class ObservableTest : Spek({
 
         it("should be mappable to another MutableObservable") {
             val o1 = mutableObservable("test")
-            val o2 = o1.twoWayMap({ it.toCharArray() }, { it.joinToString("") })
+            val o2 = o1.twoWayMap({ it.toCharArray() }, { _, chars -> chars.joinToString("") })
 
             Assert.assertEquals(o1.value, "test")
             Assert.assertArrayEquals(o2.value, charArrayOf('t', 'e', 's', 't'))
@@ -627,14 +627,14 @@ class ObservableTest : Spek({
         it("should be mappable to a simpler MutableObservable") {
             val o1 = mutableObservable("test")
             val o2 = o1.twoWayMap<Boolean>(
-                { it.contains('a') },
-                {
-                    if (it) {
-                        this + "a"
-                    } else {
-                        this.replace("a", "")
+                    { it.contains('a') },
+                    { currentValue, mappedValue ->
+                        if (mappedValue) {
+                            currentValue + "a"
+                        } else {
+                            currentValue.replace("a", "")
+                        }
                     }
-                }
             )
 
             Assert.assertEquals(o1.value, "test")
@@ -667,7 +667,7 @@ class ObservableTest : Spek({
             val o2 = mutableObservable(1)
             val o3 = mutableObservable('a')
 
-            val joined = o1.twoWayJoin(o2, o3, ::Triple) { data(it.first, it.second, it.third) }
+            val joined = o1.twoWayJoin(o2, o3, ::Triple) { _, triple -> data(triple.first, triple.second, triple.third) }
 
             Assert.assertEquals("one", o1.value)
             Assert.assertEquals(1, o2.value)
@@ -706,8 +706,8 @@ class ObservableTest : Spek({
             val oList = listOf(o1, o2, o3)
 
             val joined = oList.twoWayJoin(
-                { list -> list.reversed().map { it * 2.0 } },
-                { list -> list.map { it / 2.0 }.reversed() }
+                    { list -> list.reversed().map { it * 2.0 } },
+                    { list -> list.map { it / 2.0 }.reversed() }
             )
 
             val d = 0.000001
