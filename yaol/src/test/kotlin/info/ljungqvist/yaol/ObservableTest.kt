@@ -326,11 +326,12 @@ class ObservableTest : Spek({
 
         context("an Observable mappable to another Observable") {
 
-            val observable = mutableObservable(0)
-            val observablePositive = mutableObservable("it is true")
-            val observableNegative = mutableObservable("that is not true")
 
             it("should be flat-mappable") {
+
+                val observable = mutableObservable(0)
+                val observablePositive = mutableObservable("it is true")
+                val observableNegative = mutableObservable("that is not true")
 
                 val ref = AtomicReference<Int?>(null)
                 val refPositive = AtomicReference<String?>(null)
@@ -449,6 +450,108 @@ class ObservableTest : Spek({
                 Assert.assertEquals("it is still true", refPositive.get())
                 Assert.assertNull(refNegative.get())
                 Assert.assertEquals("it is still true", refMapped.get())
+
+                s1.close()
+                s2.close()
+                s3.close()
+                s4.close()
+
+            }
+
+            it("should be flat-mappable to mutable") {
+
+                val observable = mutableObservable(0)
+                val observablePositive = mutableObservable("it is true")
+                val observableNegative = mutableObservable("that is not true")
+
+                val ref = AtomicReference<Int?>(null)
+                val refPositive = AtomicReference<String?>(null)
+                val refNegative = AtomicReference<String?>(null)
+                val refMapped = AtomicReference<String?>(null)
+
+                val s1 = observable.onChange { ref.set(observable.value) }
+                val s2 = observablePositive.onChange { refPositive.set(observablePositive.value) }
+                val s3 = observableNegative.onChange { refNegative.set(observableNegative.value) }
+
+                Assert.assertEquals(0, observable.value)
+                Assert.assertEquals("it is true", observablePositive.value)
+                Assert.assertEquals("that is not true", observableNegative.value)
+                Assert.assertNull(ref.get())
+                Assert.assertNull(refPositive.get())
+                Assert.assertNull(refNegative.get())
+                Assert.assertNull(refMapped.get())
+
+                val mappedObservable = observable.flatMapMutable {
+                    when {
+                        it > 0 -> observablePositive
+                        else -> observableNegative
+                    }
+                }
+
+                val s4 = mappedObservable.onChange { refMapped.set(mappedObservable.value) }
+
+                Assert.assertEquals("that is not true", mappedObservable.value)
+                Assert.assertNull(refMapped.get())
+
+                mappedObservable.value = "that is not really true"
+
+                Assert.assertEquals(0, observable.value)
+                Assert.assertEquals("it is true", observablePositive.value)
+                Assert.assertEquals("that is not really true", observableNegative.value)
+                Assert.assertEquals("that is not really true", mappedObservable.value)
+                Assert.assertNull(ref.get())
+                Assert.assertNull(refPositive.get())
+                Assert.assertEquals("that is not really true", refNegative.get())
+                Assert.assertEquals("that is not really true", refMapped.get())
+
+                refNegative.set(null)
+                refMapped.set(null)
+
+
+                observable.value = 1
+
+                Assert.assertEquals(1, observable.value)
+                Assert.assertEquals("it is true", observablePositive.value)
+                Assert.assertEquals("that is not really true", observableNegative.value)
+                Assert.assertEquals("it is true", mappedObservable.value)
+                Assert.assertEquals(1, ref.get())
+                Assert.assertNull(refPositive.get())
+                Assert.assertNull(refNegative.get())
+                Assert.assertEquals("it is true", refMapped.get())
+
+                ref.set(null)
+                refMapped.set(null)
+
+
+                observablePositive.value = "it is quite true"
+
+                Assert.assertEquals(1, observable.value)
+                Assert.assertEquals("it is quite true", observablePositive.value)
+                Assert.assertEquals("that is not really true", observableNegative.value)
+                Assert.assertEquals("it is quite true", mappedObservable.value)
+                Assert.assertNull(ref.get())
+                Assert.assertEquals("it is quite true", refPositive.get())
+                Assert.assertNull(refNegative.get())
+                Assert.assertEquals("it is quite true", refMapped.get())
+
+                refPositive.set(null)
+                refMapped.set(null)
+
+
+                mappedObservable.value = "it is now true"
+
+                Assert.assertEquals(1, observable.value)
+                Assert.assertEquals("it is now true", observablePositive.value)
+                Assert.assertEquals("that is not really true", observableNegative.value)
+                Assert.assertEquals("it is now true", mappedObservable.value)
+                Assert.assertNull(ref.get())
+                Assert.assertEquals("it is now true", refPositive.get())
+                Assert.assertNull(refNegative.get())
+                Assert.assertEquals("it is now true", refMapped.get())
+
+                refPositive.set(null)
+                refMapped.set(null)
+
 
                 s1.close()
                 s2.close()

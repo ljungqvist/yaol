@@ -127,7 +127,7 @@ interface Observable<out T> : ReadOnlyProperty<Any, T> {
                     .also(::addMappedObservables)
 
     /**
-     * Flat maps observable to an [OUT] observable by an [T] -> [Observable] mapping.
+     * Flat maps observable to an [OUT] observable by a [T] -> [Observable] mapping.
      *
      * @param mapping the mapping function from the value of this observable to a new observable
      * @return the mapped observable
@@ -137,8 +137,18 @@ interface Observable<out T> : ReadOnlyProperty<Any, T> {
                     .also(::addMappedObservables)
 
     /**
-     * Same as [flatMap], bbut the mapping function may return null, resulting in an immutable observable with the
-     * value null
+     * Flat maps observable to an [OUT] observable by a [T] -> [MutableObservable] mapping.
+     *
+     * @param mapping the mapping function from the value of this observable to a mutable observable
+     * @return the mapped mutable observable
+     */
+    fun <OUT> flatMapMutable(mapping: (T) -> MutableObservable<OUT>): MutableObservable<OUT> =
+            MutableFlatMappedObservable { mapping(value) }
+                    .also(::addMappedObservables)
+
+    /**
+     * Same as [flatMap], but the mapping function may return null, resulting in an immutable
+     * observable with the value null
      *
      * @param mapping the mapping function
      * @return the mapped observable
