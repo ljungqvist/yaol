@@ -8,7 +8,7 @@ import androidx.lifecycle.OnLifecycleEvent
 import info.ljungqvist.yaol.selfReference
 import java.io.Closeable
 
-fun <C : Closeable> C.closeOnDestroy(lifecycle: Lifecycle): LifecycleObserver =
+fun Closeable.closeOnDestroy(lifecycle: Lifecycle): LifecycleObserver =
         selfReference {
             object : LifecycleObserver {
                 @Keep
@@ -21,5 +21,5 @@ fun <C : Closeable> C.closeOnDestroy(lifecycle: Lifecycle): LifecycleObserver =
             }.also(lifecycle::addObserver)
         }
 
-fun <C : Closeable> C.closeOnDestroy(lifecycleOwner: LifecycleOwner): LifecycleObserver =
+fun Closeable.closeOnDestroy(lifecycleOwner: LifecycleOwner): LifecycleObserver =
     closeOnDestroy(lifecycleOwner.lifecycle)

@@ -2,8 +2,6 @@ package info.ljungqvist.yaol.android.preferences
 
 import android.content.Context
 import android.content.SharedPreferences
-import android.os.Build
-import android.preference.PreferenceManager
 import info.ljungqvist.yaol.MutableObservable
 import java.util.concurrent.Future
 
@@ -28,20 +26,17 @@ interface ObservablePreferenceFactory {
 
     companion object {
 
-        fun create(context: Context, name: String): ObservablePreferenceFactory =
-                ObservablePreferenceFactoryImpl(context, name)
+        @Deprecated(message = "use Context.createObservablePreferenceFactory(name)", replaceWith = ReplaceWith("context.createObservablePreferenceFactory(name)"))
+        fun create(context: Context, name: String) =
+                context.createObservablePreferenceFactory(name)
 
-        fun createWithDefaultSharedPreferencesName(context: Context): ObservablePreferenceFactory =
-                ObservablePreferenceFactoryImpl(context, context.defaultSharedPreferencesName)
+        @Deprecated("use Context.createObservablePreferenceFactory(name)", replaceWith = ReplaceWith("context.createObservablePreferenceFactory(context.packageName + \"_preferences\")"))
+        fun createWithDefaultSharedPreferencesName(context: Context) =
+                context.createObservablePreferenceFactory(context.packageName + "_preferences")
 
     }
 
 }
 
-private val Context.defaultSharedPreferencesName: String
-    get() =
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            PreferenceManager.getDefaultSharedPreferencesName(this)
-        } else {
-            packageName + "_preferences"
-        }
+fun Context.createObservablePreferenceFactory(name: String): ObservablePreferenceFactory =
+        ObservablePreferenceFactoryImpl(this, name)
