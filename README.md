@@ -99,11 +99,14 @@ fun data(
 Include <https://dl.bintray.com/ljungqvist/yaol/> amongst your repositories:
 
 ```
-repositories {
-    maven { url "https://dl.bintray.com/ljungqvist/yaol" }
+maven {
+    url "https://maven.pkg.github.com/ljungqvist/yaol"
+    credentials {
+        username = project.findProperty("gpr.user") ?: System.getenv('YAOL_USER')
+        password = project.findProperty("gpr.key") ?: System.getenv('YAOL_KEY')
+    }
 }
 ```
-
 And the library amongst your dependencies:
 
 ```
@@ -123,6 +126,6 @@ dependencies {
 ### Deploy to Bintray
 
 ```
-./gradlew clean && ./gradlew yaol:build && ./gradlew yaol:publishToMavenLocal && ./gradlew yaol-android:build && ./gradlew bintrayUpload
+./gradlew clean && ./gradlew yaol:build && ./gradlew yaol:publishToMavenLocal && ./gradlew yaol-android:build && ./gradlew publish
 ```
 

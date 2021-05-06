@@ -7,6 +7,16 @@ task sourcesJar(type: Jar) {
 }
 
 publishing {
+    repositories {
+        maven {
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/ljungqvist/yaol")
+            credentials {
+                username = System.getenv('YAOL_USER')
+                password = System.getenv('YAOL_KEY')
+            }
+        }
+    }
     publications {
         Production(MavenPublication) {
             artifact("$buildDir/outputs/aar/yaol-android-release.aar")
@@ -29,28 +39,6 @@ publishing {
                     }
                 }
             }
-        }
-    }
-}
-
-bintray {
-    user = System.getenv('BINTRAY_USER')
-    key = System.getenv('BINTRAY_KEY')
-    publications = ['Production']
-    configurations = ['archives']
-    publish = true
-    override = true
-    dryRun = false
-    pkg {
-        repo = 'yaol'
-        name = 'yaol-android'
-        userOrg = user
-        licenses = ['Apache-2.0']
-        vcsUrl = 'git@github.com:ljungqvist/yaol.git'
-        version {
-            name = yaol_version
-            released  = new Date()
-            vcsTag = "v$yaol_version"
         }
     }
 }
