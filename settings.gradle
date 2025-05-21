@@ -1,1 +1,0 @@
-include ':yaol', ':yaol-android', ':testapp'
