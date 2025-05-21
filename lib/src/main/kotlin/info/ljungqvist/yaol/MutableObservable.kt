@@ -5,6 +5,7 @@ import kotlin.reflect.KProperty
 
 typealias ReverseMapping<FROM, TO> = (currentValue: FROM, mappedValue: TO) -> FROM
 
+@Suppress("DestructuringWrongName")
 interface MutableObservable<T> : Observable<T>, ReadWriteProperty<Any, T> {
 
     override var value: T
