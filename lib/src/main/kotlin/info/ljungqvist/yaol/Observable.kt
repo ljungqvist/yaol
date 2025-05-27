@@ -8,7 +8,7 @@ import kotlin.reflect.KProperty
  * The main observable interface.
  * @param T the type of the observable
  */
-interface Observable<out T> : ReadOnlyProperty<Any, T> {
+interface Observable<out T> : ReadOnlyProperty<Any?, T> {
 
     /**
      * The value of the observable
@@ -19,7 +19,7 @@ interface Observable<out T> : ReadOnlyProperty<Any, T> {
      * Getter for [[ReadOnlyProperty]]
      * @return the value
      */
-    override operator fun getValue(thisRef: Any, property: KProperty<*>): T = value
+    override operator fun getValue(thisRef: Any?, property: KProperty<*>): T = value
 
     /**
      * Notify the observable that the value has changed. Should cause the listeners to be executed.
@@ -59,7 +59,7 @@ interface Observable<out T> : ReadOnlyProperty<Any, T> {
      * @return a subscription for unsubscribing
      */
     fun runAndOnChange(body: (T) -> Unit): Subscription =
-            runAndOnChange(body, body)
+        runAndOnChange(body, body)
 
     /**
      * Sanme as [runAndOnChange] (body), but with different body for the first run
@@ -87,13 +87,11 @@ interface Observable<out T> : ReadOnlyProperty<Any, T> {
      * @return a subscription for unsubscribing
      */
     fun onChangeUntilTrue(body: (T) -> Boolean): Subscription =
-            selfReference {
-                onChange {
-                    if (body(it)) {
-                        self.close()
-                    }
-                }
+        selfReference {
+            onChange {
+                if (body(it)) self.close()
             }
+        }
 
     /**
      * Register a boolean function to be run once synchronously and then when the observables value changes, until it
@@ -123,8 +121,8 @@ interface Observable<out T> : ReadOnlyProperty<Any, T> {
      * @return the mapped observable
      */
     fun <OUT> map(mapping: (T) -> OUT): Observable<OUT> =
-            MappedObservable { mapping(value) }
-                    .also(::addMappedObservables)
+        MappedObservable { mapping(value) }
+            .also(::addMappedObservables)
 
     /**
      * Flat maps observable to an [OUT] observable by a [T] -> [Observable] mapping.
@@ -133,8 +131,8 @@ interface Observable<out T> : ReadOnlyProperty<Any, T> {
      * @return the mapped observable
      */
     fun <OUT> flatMap(mapping: (T) -> Observable<OUT>): Observable<OUT> =
-            FlatMappedObservable { mapping(value) }
-                    .also(::addMappedObservables)
+        FlatMappedObservable { mapping(value) }
+            .also(::addMappedObservables)
 
     /**
      * Flat maps observable to an [OUT] observable by a [T] -> [MutableObservable] mapping.
@@ -143,8 +141,8 @@ interface Observable<out T> : ReadOnlyProperty<Any, T> {
      * @return the mapped mutable observable
      */
     fun <OUT> flatMapMutable(mapping: (T) -> MutableObservable<OUT>): MutableObservable<OUT> =
-            MutableFlatMappedObservable { mapping(value) }
-                    .also(::addMappedObservables)
+        MutableFlatMappedObservable { mapping(value) }
+            .also(::addMappedObservables)
 
     /**
      * Same as [flatMap], but the mapping function may return null, resulting in an immutable
@@ -154,8 +152,8 @@ interface Observable<out T> : ReadOnlyProperty<Any, T> {
      * @return the mapped observable
      */
     fun <OUT> flatMapNullable(mapping: (T) -> Observable<OUT>?): Observable<OUT?> =
-            FlatMappedObservable { mapping(value) ?: immutableObservable(null) }
-                    .also(::addMappedObservables)
+        FlatMappedObservable { mapping(value) ?: immutableObservable(null) }
+            .also(::addMappedObservables)
 
     /**
      * Joins this and another observable into new observable.
@@ -164,51 +162,51 @@ interface Observable<out T> : ReadOnlyProperty<Any, T> {
      * @return the joined observable
      */
     fun <A, OUT> join(other: Observable<A>, mapping: (T, A) -> OUT): Observable<OUT> =
-            MappedObservable { mapping(value, other.value) }
-                    .also { mapped ->
-                        listOf(this, other).forEach { it.addMappedObservables(mapped) }
-                    }
+        MappedObservable { mapping(value, other.value) }
+            .also { mapped ->
+                listOf(this, other).forEach { it.addMappedObservables(mapped) }
+            }
 
     fun <A, B, OUT> join(otherA: Observable<A>, otherB: Observable<B>, mapping: (T, A, B) -> OUT): Observable<OUT> =
-            MappedObservable { mapping(value, otherA.value, otherB.value) }
-                    .also { mapped ->
-                        listOf(this, otherA, otherB).forEach { it.addMappedObservables(mapped) }
-                    }
+        MappedObservable { mapping(value, otherA.value, otherB.value) }
+            .also { mapped ->
+                listOf(this, otherA, otherB).forEach { it.addMappedObservables(mapped) }
+            }
 
     fun <A, B, C, OUT> join(
-            otherA: Observable<A>,
-            otherB: Observable<B>,
-            otherC: Observable<C>,
-            mapping: (T, A, B, C) -> OUT
+        otherA: Observable<A>,
+        otherB: Observable<B>,
+        otherC: Observable<C>,
+        mapping: (T, A, B, C) -> OUT
     ): Observable<OUT> =
-            MappedObservable { mapping(value, otherA.value, otherB.value, otherC.value) }
-                    .also { mapped ->
-                        listOf(this, otherA, otherB, otherC).forEach { it.addMappedObservables(mapped) }
-                    }
+        MappedObservable { mapping(value, otherA.value, otherB.value, otherC.value) }
+            .also { mapped ->
+                listOf(this, otherA, otherB, otherC).forEach { it.addMappedObservables(mapped) }
+            }
 
     fun <A, B, C, D, OUT> join(
-            otherA: Observable<A>,
-            otherB: Observable<B>,
-            otherC: Observable<C>,
-            otherD: Observable<D>,
-            mapping: (T, A, B, C, D) -> OUT
+        otherA: Observable<A>,
+        otherB: Observable<B>,
+        otherC: Observable<C>,
+        otherD: Observable<D>,
+        mapping: (T, A, B, C, D) -> OUT
     ): Observable<OUT> =
-            MappedObservable { mapping(value, otherA.value, otherB.value, otherC.value, otherD.value) }
-                    .also { mapped ->
-                        listOf(this, otherA, otherB, otherC, otherD).forEach { it.addMappedObservables(mapped) }
-                    }
+        MappedObservable { mapping(value, otherA.value, otherB.value, otherC.value, otherD.value) }
+            .also { mapped ->
+                listOf(this, otherA, otherB, otherC, otherD).forEach { it.addMappedObservables(mapped) }
+            }
 
     fun <A, B, C, D, E, OUT> join(
-            otherA: Observable<A>,
-            otherB: Observable<B>,
-            otherC: Observable<C>,
-            otherD: Observable<D>,
-            otherE: Observable<E>,
-            mapping: (T, A, B, C, D, E) -> OUT
+        otherA: Observable<A>,
+        otherB: Observable<B>,
+        otherC: Observable<C>,
+        otherD: Observable<D>,
+        otherE: Observable<E>,
+        mapping: (T, A, B, C, D, E) -> OUT
     ): Observable<OUT> =
-            MappedObservable { mapping(value, otherA.value, otherB.value, otherC.value, otherD.value, otherE.value) }
-                    .also { mapped ->
-                        listOf(this, otherA, otherB, otherC, otherD, otherE).forEach { it.addMappedObservables(mapped) }
-                    }
+        MappedObservable { mapping(value, otherA.value, otherB.value, otherC.value, otherD.value, otherE.value) }
+            .also { mapped ->
+                listOf(this, otherA, otherB, otherC, otherD, otherE).forEach { it.addMappedObservables(mapped) }
+            }
 
 }

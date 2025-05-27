@@ -15,7 +15,7 @@ abstract class ObservableImpl<out T> : Observable<T> {
 
     override fun notifyChange() {
         synchronized(mappedObservables) {
-            if (inNotifyChange) throw IllegalStateException("notifyChange called from inside notifyChange")
+            check(!inNotifyChange) { "notifyChange called from inside notifyChange" }
             inNotifyChange = true
             try {
                 callMappedOnChange()
@@ -42,7 +42,7 @@ abstract class ObservableImpl<out T> : Observable<T> {
             .also { subs -> subscriptions.add(subs) }
 
     override fun addMappedObservables(observable: Observable<*>): Unit = synchronized(mappedObservables) {
-        if (inNotifyChange) throw IllegalStateException("addMappedObservables called from inside notifyChange")
+        check(!inNotifyChange) { "addMappedObservables called from inside notifyChange" }
 
         if (mappedObservables.none { it.get() == observable }) {
             mappedObservables.add(WeakReference(observable))
@@ -65,25 +65,8 @@ abstract class ObservableImpl<out T> : Observable<T> {
                 else -> size / setSize > 2
             }
         ) {
-            mappedObservables.remove { it.get() == null }
+            mappedObservables.removeIf { it.get() == null }
         }
     }
-
-}
-
-/**
- * Same as [java.util.Collection.removeIf] in Java 1.8
- */
-private fun <T> MutableCollection<T>.remove(filter: (T) -> Boolean): Int {
-
-    var removed = 0
-    val it = iterator()
-    while (it.hasNext()) {
-        if (filter(it.next())) {
-            it.remove()
-            removed++
-        }
-    }
-    return removed
 
 }
